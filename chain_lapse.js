@@ -27,10 +27,11 @@ if (typeof window.__exploitBridge === 'undefined') {
 }
 window._exploitLines = window._exploitLines || [];
 
+import { establishPrimitive } from "./core.js";
+import { installWindowP } from "./mem.js";
+import { int64 } from "./int64.js";
+import { offsetsFor } from "./ps4_offsets.js";
 
-// ✅ USA ESTO (las funciones ya están globales):
-// establishPrimitive, installWindowP, int64, offsetsFor
-// ya existen porque se cargaron con <script>
 // ============================================
 // VARIABLES PARA CONTROL DE ESTADO
 // ============================================
@@ -327,7 +328,7 @@ try {
         }
     } else {
         __exploitBridge.mark("PAYLOAD-SKIP", "no valid payload selected");
-        __exploitBridge.mark("PAYLOAD-BLOB", "NOT LOADED");
+        __exploitBridge.mark("PAYLOAD-BLOB", "NOT LOADED -- selección inválida");
     }
 } catch (e) {
     __exploitBridge.mark("PAYLOAD-FETCH-FAILED", (e && e.message) ? e.message : String(e));
