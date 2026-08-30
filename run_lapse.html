@@ -241,7 +241,7 @@ input:checked + .slider:before {
 </head>
 <body>
 <!-- ============================================ -->
-<!-- ✅ CARGA DEL EXPLOIT COMO MÓDULO (SOLO UNA VEZ) -->
+<!-- CARGA DEL EXPLOIT COMO MODULO (SOLO UNA VEZ) -->
 <!-- ============================================ -->
 <script type="module">import "./chain_lapse.js";</script>
 
@@ -490,6 +490,13 @@ async function loadExploit(event) {
         msgs2.innerHTML = "★ UNSUPPORTED FIRMWARE " + fw.key;
         return;
     }
+    var autoCheckbox = document.getElementById("checkbox1");
+    var autoOn = autoCheckbox ? autoCheckbox.checked : false;
+    var hayPayloadManual = (typeof window.payloadManualSeleccionado !== 'undefined' && window.payloadManualSeleccionado !== null);
+    if (!origenManual && !autoOn && !hayPayloadManual) {
+        msgs2.innerHTML = "★ Auto-OFF — Click a GoldHEN ★";
+        return;
+    }
     msgs2.innerHTML = "★ Loading " + bug.toUpperCase() + " chain for FW " + fw.key + " ...";
     window.__exploitBridge = {
         mark: function(tag, detail) {
@@ -507,10 +514,8 @@ async function loadExploit(event) {
     };
     try {
         if (bug === "lapse") {
-            await import("./chain_lapse.js");
             msgs2.innerHTML = "★ LAPSE CHAIN LOADED!";
         } else if (bug === "poops") {
-            await import("./chain_poops.js");
             msgs2.innerHTML = "★ POOPS CHAIN LOADED!";
         }
         localStorage.setItem("exploitCompletado", "true");
@@ -551,7 +556,9 @@ function checkthebox1() {
     `;
     restoreSelectedGoldHEN();
     mostrarLoadedMSG();
-    loadExploit();
+    setTimeout(function() {
+        loadExploit();
+    }, 500);
   } else {
     localStorage.setItem("CheckBOX1", "false");
     LoadedMSG = "★ Auto-GoldHEN ★ OFF";
@@ -596,11 +603,9 @@ window.onload = function() {
     var autoOn = localStorage.getItem("CheckBOX1") === "true";
     var msgs2 = document.getElementById("msgs2");
     if (autoOn && !isExploitBlocked("auto")) {
-        loadExploit();
-    } else if (autoOn && isExploitBlocked("auto")) {
-        if (msgs2) {
-        }
-        mostrarLoadedMSG();
+        setTimeout(function() {
+            loadExploit();
+        }, 1000);
     } else {
         if (msgs2) {
             msgs2.textContent = "★ Select GoldHEN ★";
