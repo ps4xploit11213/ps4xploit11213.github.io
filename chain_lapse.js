@@ -112,39 +112,10 @@ if (typeof window.__exploitBridge === 'undefined') {
 }
 window._exploitLines = window._exploitLines || [];
 
-// ============================================
-// CARGA DE MÓDULOS CON SAFEIMPORT
-// ============================================
-try {
-    const core = await safeImport("./core.js");
-    moduleMonitor("core.js");
-    const mem = await safeImport("./mem.js");
-    moduleMonitor("mem.js");
-    const int64Mod = await safeImport("./int64.js");
-    moduleMonitor("int64.js");
-    const offsets = await safeImport("./ps4_offsets.js");
-    moduleMonitor("ps4_offsets.js");
-
-    // Extraer las funciones necesarias
-    const { establishPrimitive } = core;
-    const { installWindowP } = mem;
-    const { int64 } = int64Mod;
-    const { offsetsFor } = offsets;
-
-    __exploitBridge.mark("MODULES-READY", "All modules imported successfully");
-} catch (e) {
-    const errorMsg = e.message || String(e);
-    __exploitBridge.mark("MODULES-FATAL", "Critical error loading modules: " + errorMsg);
-    __exploitBridge.state("❌ ERROR: Cannot load required modules");
-
-    // Mostrar error en pantalla
-    const msgs2 = document.getElementById("msgs2");
-    if (msgs2) {
-        msgs2.textContent = "★ ERROR: " + errorMsg + " ★";
-        msgs2.style.color = "#FF3333";
-    }
-    throw e;
-}
+import { establishPrimitive } from "./core.js";
+import { installWindowP } from "./mem.js";
+import { int64 } from "./int64.js";
+import { offsetsFor } from "./ps4_offsets.js";
 
 // ============================================
 // VARIABLES PARA CONTROL DE ESTADO
