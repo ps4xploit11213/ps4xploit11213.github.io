@@ -25,31 +25,7 @@
 <body><!-- ============================================ -->
 <!-- PRECARGA DE MÓDULOS PARA CACHE OFFLINE       -->
 <!-- ============================================ -->
-<script type="module">
-    // Precargar módulos en segundo plano para que se cachereen
-    (async function preloadModules() {
-        try {
-            console.log('Preloading modules for offline use...');
-            const modules = [
-                './core.js',
-                './mem.js',
-                './int64.js',
-                './ps4_offsets.js'
-            ];
 
-            // Cargar todos los módulos en paralelo
-            await Promise.all(modules.map(m => import(m)));
-            console.log('✅ All modules preloaded and cached');
-
-            // Guardar en localStorage para saber que están disponibles
-            localStorage.setItem('modules_cached', 'true');
-            localStorage.setItem('modules_cached_date', Date.now().toString());
-        } catch (e) {
-            console.warn('Module preload failed:', e);
-            // No es crítico, solo para cache
-        }
-    })();
-</script>
 <div id="brand"><img src="ps4xploit-logo.png" alt="" width="28" height="28"><b>PS4 XPLOIT</b></div>
 <div id="wrap">
   <div id="state">detecting firmware...</div>
@@ -157,6 +133,31 @@
         }, false);
     }
 })();
+</script>
+<script type="module">
+    // Precargar módulos en segundo plano para que se cachereen
+    (async function preloadModules() {
+        try {
+            console.log('Preloading modules for offline use...');
+            const modules = [
+                './core.js',
+                './mem.js',
+                './int64.js',
+                './ps4_offsets.js'
+            ];
+
+            // Cargar todos los módulos en paralelo
+            await Promise.all(modules.map(m => import(m)));
+            console.log('✅ All modules preloaded and cached');
+
+            // Guardar en localStorage para saber que están disponibles
+            localStorage.setItem('modules_cached', 'true');
+            localStorage.setItem('modules_cached_date', Date.now().toString());
+        } catch (e) {
+            console.warn('Module preload failed:', e);
+            // No es crítico, solo para cache
+        }
+    })();
 </script>
 </body>
 </html>
