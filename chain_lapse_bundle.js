@@ -2536,15 +2536,25 @@ export function offsetsFor(uaString) {
 // ============================================
 // EXPORTAR PARA USO GLOBAL - BUNDLE COMPLETO
 // ============================================
+// Las funciones ya están definidas en core.js y mem.js
+
+// Extraer las funciones de los módulos (si están en window)
+const _establishPrimitive = window.establishPrimitive || establishPrimitive;
+const _installWindowP = window.installWindowP || installWindowP;
+
 window._chainLapseBundle = {
     int64: int64,
-    establishPrimitive: establishPrimitive,
-    installWindowP: installWindowP,
+    establishPrimitive: _establishPrimitive,
+    installWindowP: _installWindowP,
     offsetsFor: offsetsFor
 };
 
-console.log('✅ Bundle completo cargado y listo para usar');
-console.log('📦 int64:', typeof int64);
-console.log('📦 establishPrimitive:', typeof establishPrimitive);
-console.log('📦 installWindowP:', typeof installWindowP);
-console.log('📦 offsetsFor:', typeof offsetsFor);
+// Exponer globalmente
+window.establishPrimitive = _establishPrimitive;
+window.installWindowP = _installWindowP;
+window.int64 = int64;
+window.offsetsFor = offsetsFor;
+
+console.log('✅ Bundle cargado');
+console.log('📦 establishPrimitive:', typeof _establishPrimitive);
+console.log('📦 installWindowP:', typeof _installWindowP);
