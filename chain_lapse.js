@@ -1,4 +1,89 @@
 // ============================================
+// PATCH: Módulos seguros para offline
+// ============================================
+let retryCount = 0;
+const MAX_RETRIES = 3;
+let moduleRetryTimer = null;
+
+async function safeImport(modulePath) {
+    try {
+        // Intentar cargar el módulo normalmente
+        const module = await import(modulePath);
+        __exploitBridge.mark("MODULE-OK", modulePath + " loaded successfully");
+        return module;
+    } catch (e) {
+        retryCount++;
+        const errorMsg = e.message || String(e);
+        __exploitBridge.mark("MODULE-FAIL", `${modulePath}: ${errorMsg} (attempt ${retryCount}/${MAX_RETRIES})`);
+
+        // Si estamos offline y aún hay intentos
+        if (!navigator.onLine && retryCount <= MAX_RETRIES) {
+            __exploitBridge.state(`⚠️ Offline: Retrying ${modulePath} (${retryCount}/${MAX_RETRIES})...`);
+
+            // Esperar progresivamente más tiempo entre intentos
+            const delay = retryCount * 1000;
+            await new Promise(r => setTimeout(r, delay));
+
+            // Si es el último intento, recargar la página para forzar cache
+            if (retryCount === MAX_RETRIES) {
+                __exploitBridge.state("🔄 Last attempt: Reloading page to use cache...");
+                // Mostrar mensaje antes de recargar
+                const msgs2 = document.getElementById("msgs2");
+                if (msgs2) {
+                    msgs2.textContent = "★ OFFLINE: Reloading to use cache... ★";
+                }
+
+                // Recargar después de 1.5 segundos
+                await new Promise(r => setTimeout(r, 1500));
+                window.location.reload();
+                return new Promise(() => {}); // No retornar nunca (la página se recarga)
+            }
+
+            // Reintentar
+            return safeImport(modulePath);
+        }
+
+        // Si estamos online o se acabaron los intentos, intentar con URL absoluta
+        try {
+            const baseURL = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+            const fullURL = baseURL + modulePath;
+            __exploitBridge.mark("MODULE-FALLBACK", "Trying absolute URL: " + fullURL);
+            return await import(fullURL);
+        } catch (e2) {
+            __exploitBridge.mark("MODULE-FALLBACK-FAIL", "Absolute URL also failed: " + e2.message);
+            throw new Error(`Cannot load module ${modulePath}: ${errorMsg}`);
+        }
+    }
+}
+
+// ============================================
+// MONITOR: Detectar si los módulos se cargan correctamente
+// ============================================
+function monitorModuleLoading() {
+    let modulesLoaded = 0;
+    const totalModules = 4; // core, mem, int64, ps4_offsets
+
+    return function moduleLoaded(name) {
+        modulesLoaded++;
+        __exploitBridge.mark("MODULE-PROGRESS", `${name} loaded (${modulesLoaded}/${totalModules})`);
+
+        if (modulesLoaded === totalModules) {
+            __exploitBridge.mark("ALL-MODULES-READY", "All modules loaded successfully");
+            // Limpiar cualquier mensaje de error
+            const msgs2 = document.getElementById("msgs2");
+            if (msgs2 && msgs2.textContent.includes("ERROR")) {
+                msgs2.textContent = "★ All modules ready ★";
+            }
+        }
+    };
+}
+
+const moduleMonitor = monitorModuleLoading();
+
+
+
+
+// ============================================
 // BRIDGE PARA REDIRIGIR mark() Y state() A #msgs2
 // (ACTUALIZA EN PANTALLA SIN APELOTONAR NI REPETIR)
 // ============================================
@@ -27,10 +112,39 @@ if (typeof window.__exploitBridge === 'undefined') {
 }
 window._exploitLines = window._exploitLines || [];
 
-import { establishPrimitive } from "./core.js";
-import { installWindowP } from "./mem.js";
-import { int64 } from "./int64.js";
-import { offsetsFor } from "./ps4_offsets.js";
+// ============================================
+// CARGA DE MÓDULOS CON SAFEIMPORT
+// ============================================
+try {
+    const core = await safeImport("./core.js");
+    moduleMonitor("core.js");
+    const mem = await safeImport("./mem.js");
+    moduleMonitor("mem.js");
+    const int64Mod = await safeImport("./int64.js");
+    moduleMonitor("int64.js");
+    const offsets = await safeImport("./ps4_offsets.js");
+    moduleMonitor("ps4_offsets.js");
+
+    // Extraer las funciones necesarias
+    const { establishPrimitive } = core;
+    const { installWindowP } = mem;
+    const { int64 } = int64Mod;
+    const { offsetsFor } = offsets;
+
+    __exploitBridge.mark("MODULES-READY", "All modules imported successfully");
+} catch (e) {
+    const errorMsg = e.message || String(e);
+    __exploitBridge.mark("MODULES-FATAL", "Critical error loading modules: " + errorMsg);
+    __exploitBridge.state("❌ ERROR: Cannot load required modules");
+
+    // Mostrar error en pantalla
+    const msgs2 = document.getElementById("msgs2");
+    if (msgs2) {
+        msgs2.textContent = "★ ERROR: " + errorMsg + " ★";
+        msgs2.style.color = "#FF3333";
+    }
+    throw e;
+}
 
 // ============================================
 // VARIABLES PARA CONTROL DE ESTADO
