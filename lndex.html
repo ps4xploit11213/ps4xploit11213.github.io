@@ -252,7 +252,12 @@ function sysinfo() {
     document.getElementById("sysinfo").innerHTML = navigator.userAgent
 }
 </script>
-
+<script src="int64.js"></script>
+<script src="ps4_offsets.js"></script>
+<script src="core.js"></script>
+<script src="mem.js"></script>
+<script src="chain_lapse.js"></script>
+<script src="chain_poops.js"></script>
 <main class="site-wrapper">
   <div align="center"><br>
     <img class='btne noHover' src="ps4xploit-logo.png" alt="ps4-xploit900" style="max-width:80%;">
@@ -423,15 +428,6 @@ function sysinfo() {
     </div>
   </div>
 </main>
-<script src="int64.js"></script>
-<script src="ps4_offsets.js"></script>
-<script src="core.js"></script>
-<script src="mem.js"></script>
-<script src="chain_lapse.js"></script>
-<script src="chain_poops.js"></script>
-
-
-
 <script>
 function restaurarTextoSuperior() {
     var msgs2 = document.getElementById("msgs2");
@@ -493,19 +489,14 @@ async function loadExploit(event) {
         msgs2.innerHTML = "★ UNSUPPORTED FIRMWARE " + fw.key;
         return;
     }
-    msgs2.innerHTML = "★ Loading " + bug.toUpperCase() + " chain for FW " + fw.key + " ...";
-
-    // Verificar si Auto está activado o es manual
     var autoCheckbox = document.getElementById("checkbox1");
     var autoOn = autoCheckbox ? autoCheckbox.checked : false;
     var hayPayloadManual = (typeof window.payloadManualSeleccionado !== 'undefined' && window.payloadManualSeleccionado !== null);
-
-    // Si NO es manual y Auto está OFF, NO ejecutar
     if (!origenManual && !autoOn && !hayPayloadManual) {
         msgs2.innerHTML = "★ Auto-OFF — Click a GoldHEN ★";
         return;
     }
-
+    msgs2.innerHTML = "★ Loading " + bug.toUpperCase() + " chain for FW " + fw.key + " ...";
     window.__exploitBridge = {
         mark: function(tag, detail) {
             var msg = tag + (detail ? "  " + detail : "");
@@ -520,15 +511,10 @@ async function loadExploit(event) {
             msgs2.innerHTML = "★ " + text;
         }
     };
-
     try {
-        // Cargar dinámicamente el script correcto solo cuando se necesite
         if (bug === "lapse") {
-            // Cargar chain_lapse.js como módulo dinámicamente
-            await import("./chain_lapse.js");
             msgs2.innerHTML = "★ LAPSE CHAIN LOADED!";
         } else if (bug === "poops") {
-            await import("./chain_poops.js");
             msgs2.innerHTML = "★ POOPS CHAIN LOADED!";
         }
         localStorage.setItem("exploitCompletado", "true");
@@ -569,7 +555,6 @@ function checkthebox1() {
     `;
     restoreSelectedGoldHEN();
     mostrarLoadedMSG();
-    // Auto ON ejecuta automáticamente
     setTimeout(function() {
         loadExploit();
     }, 500);
@@ -617,7 +602,6 @@ window.onload = function() {
     var autoOn = localStorage.getItem("CheckBOX1") === "true";
     var msgs2 = document.getElementById("msgs2");
     if (autoOn && !isExploitBlocked("auto")) {
-        // Auto ON - ejecutar después de un pequeño retraso
         setTimeout(function() {
             loadExploit();
         }, 1000);
@@ -668,7 +652,6 @@ function load_GoldHEN_v2.4b18.4(){
   incrementPassCounter();
   setTimeout(restaurarTextoSuperior, 3000);
 }
-
 let passIncremented = false;
 let failIncremented = false;
 function incrementPassCounter() {
