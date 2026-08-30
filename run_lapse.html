@@ -240,13 +240,15 @@ input:checked + .slider:before {
 </style>
 </head>
 <body>
-<!-- ============================================ -->
-<!-- CARGA DEL EXPLOIT COMO MODULO (SIN import)   -->
-<!-- ============================================ -->
-<script type="module">import "./chain_lapse.js";</script>
+  <script src="int64.js"></script>
+  <script src="ps4_offsets.js"></script>
+  <script src="core.js"></script>
+  <script src="mem.js"></script>
+  <script src="chain_lapse.js"></script>
+  <script src="chain_poops.js"></script>
 
-<div id="state" style="display:none;"></div>
-<div id="out" style="display:none;"></div>
+  <div id="state" style="display:none;"></div>
+  <div id="out" style="display:none;"></div>
 <main class="site-wrapper"><main class="site-wrapper2"><div id="jb-progress"></div>
    <div id="notify" style="display:none;">
         <img src="./hen.png" alt="" width="32px" height="32px">
