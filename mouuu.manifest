@@ -33,11 +33,11 @@ run_poops.html
 settings.ico 
 stylemouuu.css 
 wallpaper.jpg 
-patches\1100.bin 
-patches\1150.bin 
-patches\1200.bin 
-patches\1250.bin 
-patches\1300.bin 
+patches/1100.bin 
+patches/1150.bin 
+patches/1200.bin 
+patches/1250.bin 
+patches/1300.bin 
 mouuu.manifest
 README.md
 
