@@ -499,32 +499,43 @@ async function loadExploit(event) {
         }
     };
     try {
-        if (bug === "lapse") {
-            await import("./chain_lapse.js");
+    if (bug === "lapse") {
+        // Cargar script de forma tradicional
+        var script = document.createElement('script');
+        script.src = "./chain_lapse.js";
+        script.onload = function() {
             msgs2.innerHTML = "★ LAPSE CHAIN LOADED!";
-        } else if (bug === "poops") {
-            await import("./chain_poops.js");
+            // Continuar con el resto del código
+            continuarDespuesDeCarga();
+        };
+        script.onerror = function() {
+            msgs2.innerHTML = "★ ERROR loading chain_lapse.js";
+        };
+        document.head.appendChild(script);
+    } else if (bug === "poops") {
+        var script = document.createElement('script');
+        script.src = "./chain_poops.js";
+        script.onload = function() {
             msgs2.innerHTML = "★ POOPS CHAIN LOADED!";
-        }
+            continuarDespuesDeCarga();
+        };
+        script.onerror = function() {
+            msgs2.innerHTML = "★ ERROR loading chain_poops.js";
+        };
+        document.head.appendChild(script);
+    }
+
+    function continuarDespuesDeCarga() {
         localStorage.setItem("exploitCompletado", "true");
         localStorage.setItem("exploitTimestamp", Date.now().toString());
         window._exploitCompleted = true;
         setTimeout(function() {
             restaurarTextoSuperior();
         }, 2000);
-    } catch (e) {
-        msgs2.innerHTML = "★ ERROR: " + (e.message || e);
     }
-}
-function selectGoldHEN() {
-  var selectedValue = document.getElementById("goldhen-select").value;
-  localStorage.setItem("selectedGoldHEN", selectedValue);
-}
-function restoreSelectedGoldHEN() {
-  var selectedValue = localStorage.getItem("selectedGoldHEN");
-  if (selectedValue) {
-    document.getElementById("goldhen-select").value = selectedValue;
-  }
+
+} catch (e) {
+    msgs2.innerHTML = "★ ERROR: " + (e.message || e);
 }
 function checkthebox1() {
   var chkBox = document.getElementById("checkbox1");
