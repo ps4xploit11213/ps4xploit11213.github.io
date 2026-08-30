@@ -27,10 +27,15 @@ if (typeof window.__exploitBridge === 'undefined') {
 }
 window._exploitLines = window._exploitLines || [];
 
-import { establishPrimitive } from "./core.js";
-import { installWindowP } from "./mem.js";
-import { int64 } from "./int64.js";
-import { offsetsFor } from "./ps4_offsets.js";
+// ============================================
+// ✅ ELIMINADOS: import { establishPrimitive } from "./core.js";
+// ✅ ELIMINADOS: import { installWindowP } from "./mem.js";
+// ✅ ELIMINADOS: import { int64 } from "./int64.js";
+// ✅ ELIMINADOS: import { offsetsFor } from "./ps4_offsets.js";
+// ============================================
+// LAS FUNCIONES YA ESTÁN DISPONIBLES GLOBALMENTE
+// PORQUE SE CARGARON CON <script src="..."> EN EL ORDEN CORRECTO
+// ============================================
 
 // ============================================
 // VARIABLES PARA CONTROL DE ESTADO
