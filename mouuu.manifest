@@ -1,48 +1,38 @@
-CACHE MANIFEST 
-# Version: 2026-08-30 19:48:04 
-# Generated: 30/08/2026 19:48:04,44 
- 
-CACHE: 
+CACHE MANIFEST
+# Version: 2026-08-30 19:48:04
 
-bootstrap.min.css 
-btn.css 
-cache.appcache 
-chain_lapse.js 
-chain_poops.js 
-core.js 
-GoldHENv24b184.bin 
-GoldHENv24b185.bin 
-GoldHENv24b186.bin 
-GoldHENv24b187.bin 
-GoldHENv24b188.bin 
-GoldHENv24b189.bin 
-hen.png 
-icon-goldhen.jpg 
-index.html 
-int64.js 
-lndex.html 
-loader-ps4xploithost.gif 
-mem.js 
-ok-icon.jpg 
-payload.bin 
-ps4xploit-logo.png 
-ps4_offsets.js 
-rpc_worker.js 
-run_lapse.html 
-run_poops.html 
-settings.ico 
-stylemouuu.css 
-wallpaper.jpg 
+CACHE:
+bootstrap.min.css
+btn.css
+chain_lapse.js
+chain_poops.js
+core.js
+int64.js
+mem.js
+ps4_offsets.js
+rpc_worker.js
+GoldHENv24b184.bin
+GoldHENv24b185.bin
+GoldHENv24b186.bin
+GoldHENv24b187.bin
+GoldHENv24b188.bin
+GoldHENv24b189.bin
+payload.bin
+hen.png
+icon-goldhen.jpg
+lndex.html
+loader-ps4xploithost.gif
+ok-icon.jpg
+ps4xploit-logo.png
+settings.ico
+stylemouuu.css
+wallpaper.jpg
+README.md
 patches/1100.bin 
 patches/1150.bin 
 patches/1200.bin 
 patches/1250.bin 
 patches/1300.bin 
-mouuu.manifest
-README.md
 
-NETWORK: 
-*   :: 
- 
-FALLBACK: 
-* 
+NETWORK:
+*
