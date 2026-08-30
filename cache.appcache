@@ -2,6 +2,9 @@ CACHE MANIFEST
 # Version: 2026-08-30 19:48:04
 
 CACHE:
+index.html
+run_lapse.html
+run_poops.html
 index-cache.html
 bootstrap.min.css
 btn.css
@@ -21,7 +24,6 @@ GoldHENv24b189.bin
 payload.bin
 hen.png
 icon-goldhen.jpg
-index.html
 loader-ps4xploithost.gif
 ok-icon.jpg
 ps4xploit-logo.png
