@@ -2,6 +2,7 @@ CACHE MANIFEST
 # Version: 2026-08-30 19:48:04
 
 CACHE:
+index-cache.html
 bootstrap.min.css
 btn.css
 chain_lapse.js
