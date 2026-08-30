@@ -461,9 +461,6 @@ function isExploitBlocked(origen) {
     }
     return false;
 }
-// ============================================
-// ✅ loadExploit CORREGIDO - SIN await import()
-// ============================================
 async function loadExploit(event) {
     var origenManual = (event && event.type === 'click');
     if (origenManual) {
@@ -493,17 +490,7 @@ async function loadExploit(event) {
         msgs2.innerHTML = "★ UNSUPPORTED FIRMWARE " + fw.key;
         return;
     }
-
-    var autoCheckbox = document.getElementById("checkbox1");
-    var autoOn = autoCheckbox ? autoCheckbox.checked : false;
-    var hayPayloadManual = (typeof window.payloadManualSeleccionado !== 'undefined' && window.payloadManualSeleccionado !== null);
-    if (!origenManual && !autoOn && !hayPayloadManual) {
-        msgs2.innerHTML = "★ Auto-OFF — Click a GoldHEN ★";
-        return;
-    }
-
     msgs2.innerHTML = "★ Loading " + bug.toUpperCase() + " chain for FW " + fw.key + " ...";
-
     window.__exploitBridge = {
         mark: function(tag, detail) {
             var msg = tag + (detail ? "  " + detail : "");
@@ -518,12 +505,12 @@ async function loadExploit(event) {
             msgs2.innerHTML = "★ " + text;
         }
     };
-
     try {
-        // ✅ ELIMINADO await import() - el script ya se carga con <script type="module">
         if (bug === "lapse") {
+            await import("./chain_lapse.js");
             msgs2.innerHTML = "★ LAPSE CHAIN LOADED!";
         } else if (bug === "poops") {
+            await import("./chain_poops.js");
             msgs2.innerHTML = "★ POOPS CHAIN LOADED!";
         }
         localStorage.setItem("exploitCompletado", "true");
@@ -536,7 +523,6 @@ async function loadExploit(event) {
         msgs2.innerHTML = "★ ERROR: " + (e.message || e);
     }
 }
-
 function selectGoldHEN() {
   var selectedValue = document.getElementById("goldhen-select").value;
   localStorage.setItem("selectedGoldHEN", selectedValue);
@@ -565,9 +551,7 @@ function checkthebox1() {
     `;
     restoreSelectedGoldHEN();
     mostrarLoadedMSG();
-    setTimeout(function() {
-        loadExploit();
-    }, 500);
+    loadExploit();
   } else {
     localStorage.setItem("CheckBOX1", "false");
     LoadedMSG = "★ Auto-GoldHEN ★ OFF";
