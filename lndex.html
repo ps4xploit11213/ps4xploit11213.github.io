@@ -455,6 +455,20 @@ function isExploitBlocked(origen) {
     }
     return false;
 }
+
+// Función para cargar scripts tradicionales (NO módulos)
+function cargarScript(url) {
+    return new Promise(function(resolve, reject) {
+        var script = document.createElement('script');
+        script.src = url;
+        script.onload = resolve;
+        script.onerror = function() {
+            reject(new Error('Failed to load: ' + url));
+        };
+        document.head.appendChild(script);
+    });
+}
+
 async function loadExploit(event) {
     var origenManual = (event && event.type === 'click');
     if (origenManual) {
@@ -513,13 +527,12 @@ async function loadExploit(event) {
     };
 
     try {
-        // Cargar dinámicamente el script correcto solo cuando se necesite
+        // Cargar scripts de forma tradicional (NO módulos)
         if (bug === "lapse") {
-            // Cargar chain_lapse.js como módulo dinámicamente
-            await import("./chain_lapse.js");
+            await cargarScript("./chain_lapse.js");
             msgs2.innerHTML = "★ LAPSE CHAIN LOADED!";
         } else if (bug === "poops") {
-            await import("./chain_poops.js");
+            await cargarScript("./chain_poops.js");
             msgs2.innerHTML = "★ POOPS CHAIN LOADED!";
         }
         localStorage.setItem("exploitCompletado", "true");
