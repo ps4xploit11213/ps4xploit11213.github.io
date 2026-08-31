@@ -500,32 +500,24 @@ async function loadExploit(event) {
     };
     try {
         // ============================================
-        // CARGAR EL ARCHIVO COMPLETO COMO SCRIPT NORMAL
-        // (FUNCIONA OFFLINE PORQUE NO USA import)
+        // CARGAR EL BUNDLE COMO MÓDULO (import)
+        // FUNCIONA OFFLINE SI ESTÁ CACHEADO
         // ============================================
-        await new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            // Elegir el archivo según el bug
-            const archivo = bug === "lapse" ? "./chain_lapse_full.js" : "./chain_poops_full.js";
-            script.src = archivo;
-            script.onload = function() {
-                // Esperar un poco para que el script se ejecute
-                setTimeout(function() {
-                    // Extraer las funciones del bundle si están disponibles
-                    if (window._chainLapseFull) {
-                        window.establishPrimitive = window._chainLapseFull.establishPrimitive;
-                        window.installWindowP = window._chainLapseFull.installWindowP;
-                        window.int64 = window._chainLapseFull.int64;
-                        window.offsetsFor = window._chainLapseFull.offsetsFor;
-                    }
-                    resolve();
-                }, 100);
-            };
-            script.onerror = function() {
-                reject(new Error('Failed to load ' + archivo));
-            };
-            document.head.appendChild(script);
-        });
+        const bundle = await import("./chain_lapse_full.js");
+
+        // Extraer las funciones del bundle
+        if (bundle.establishPrimitive) {
+            window.establishPrimitive = bundle.establishPrimitive;
+        }
+        if (bundle.installWindowP) {
+            window.installWindowP = bundle.installWindowP;
+        }
+        if (bundle.int64) {
+            window.int64 = bundle.int64;
+        }
+        if (bundle.offsetsFor) {
+            window.offsetsFor = bundle.offsetsFor;
+        }
 
         msgs2.innerHTML = "★ " + bug.toUpperCase() + " CHAIN LOADED!";
         localStorage.setItem("exploitCompletado", "true");
