@@ -25,19 +25,16 @@ async function safeImport(modulePath) {
             await new Promise(r => setTimeout(r, delay));
 
             // Si es el último intento, recargar la página para forzar cache
-            if (retryCount === MAX_RETRIES) {
-                __exploitBridge.state("🔄 Last attempt: Reloading page to use cache...");
-                // Mostrar mensaje antes de recargar
-                const msgs2 = document.getElementById("msgs2");
-                if (msgs2) {
-                    msgs2.textContent = "★ OFFLINE: Reloading to use cache... ★";
-                }
-
-                // Recargar después de 1.5 segundos
-                await new Promise(r => setTimeout(r, 1500));
-                window.location.reload();
-                return new Promise(() => {}); // No retornar nunca (la página se recarga)
-            }
+            // Si es el último intento, mostrar error
+if (retryCount === MAX_RETRIES) {
+    __exploitBridge.state("❌ Offline: No se pudieron cargar los módulos");
+    const msgs2 = document.getElementById("msgs2");
+    if (msgs2) {
+        msgs2.textContent = "★ OFFLINE ERROR: Modules not cached ★";
+        msgs2.style.color = "#FF3333";
+    }
+    throw new Error(`Cannot load module ${modulePath} offline`);
+}
 
             // Reintentar
             return safeImport(modulePath);
