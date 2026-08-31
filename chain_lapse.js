@@ -25,16 +25,19 @@ async function safeImport(modulePath) {
             await new Promise(r => setTimeout(r, delay));
 
             // Si es el último intento, recargar la página para forzar cache
-            // Si es el último intento, mostrar error
-if (retryCount === MAX_RETRIES) {
-    __exploitBridge.state("❌ Offline: No se pudieron cargar los módulos");
-    const msgs2 = document.getElementById("msgs2");
-    if (msgs2) {
-        msgs2.textContent = "★ OFFLINE ERROR: Modules not cached ★";
-        msgs2.style.color = "#FF3333";
-    }
-    throw new Error(`Cannot load module ${modulePath} offline`);
-}
+            if (retryCount === MAX_RETRIES) {
+                __exploitBridge.state("🔄 Last attempt: Reloading page to use cache...");
+                // Mostrar mensaje antes de recargar
+                const msgs2 = document.getElementById("msgs2");
+                if (msgs2) {
+                    msgs2.textContent = "★ OFFLINE: Reloading to use cache... ★";
+                }
+
+                // Recargar después de 1.5 segundos
+                await new Promise(r => setTimeout(r, 1500));
+                window.location.reload();
+                return new Promise(() => {}); // No retornar nunca (la página se recarga)
+            }
 
             // Reintentar
             return safeImport(modulePath);
@@ -76,48 +79,6 @@ function monitorModuleLoading() {
 }
 
 const moduleMonitor = monitorModuleLoading();
-// ============================================
-// CARGA DINÁMICA DE MÓDULOS (funciona offline)
-// ============================================
-async function loadModules() {
-    try {
-        // PRIMERO: Intentar cargar el bundle
-        try {
-            await import("./chain_lapse_bundle.js");
-            const bundle = window._chainLapseBundle;
-            if (bundle && bundle.establishPrimitive) {
-                __exploitBridge.mark("BUNDLE-LOADED", "Using pre-built bundle");
-                return bundle;
-            }
-        } catch (e) {
-            __exploitBridge.mark("BUNDLE-NOT-FOUND", e.message);
-        }
-
-        // SEGUNDO: Usar safeImport para cada módulo
-        __exploitBridge.state("Loading modules with safeImport...");
-
-        const core = await safeImport("./core.js");
-        moduleMonitor("core.js");
-        const mem = await safeImport("./mem.js");
-        moduleMonitor("mem.js");
-        const int64Mod = await safeImport("./int64.js");
-        moduleMonitor("int64.js");
-        const offsets = await safeImport("./ps4_offsets.js");
-        moduleMonitor("ps4_offsets.js");
-
-        __exploitBridge.mark("MODULES-LOADED", "All modules loaded via safeImport");
-
-        return {
-            int64: int64Mod.int64,
-            establishPrimitive: core.establishPrimitive,
-            installWindowP: mem.installWindowP,
-            offsetsFor: offsets.offsetsFor
-        };
-    } catch (e) {
-        __exploitBridge.mark("MODULES-FATAL", (e && e.message) ? e.message : String(e));
-        throw new Error("Cannot load required modules: " + (e.message || e));
-    }
-}
 
 
 
@@ -151,7 +112,10 @@ if (typeof window.__exploitBridge === 'undefined') {
 }
 window._exploitLines = window._exploitLines || [];
 
-
+import { establishPrimitive } from "./core.js";
+import { installWindowP } from "./mem.js";
+import { int64 } from "./int64.js";
+import { offsetsFor } from "./ps4_offsets.js";
 
 // ============================================
 // VARIABLES PARA CONTROL DE ESTADO
@@ -357,22 +321,6 @@ function makeRpc(worker) {
     let worker = null;
     let p = null, sc = null, stubOf = null;
     try {
-        // ============================================
-        // CARGAR MÓDULOS PRIMERO
-        // ============================================
-        const modules = await loadModules();
-        // Extraer las funciones
-        const { establishPrimitive, installWindowP, int64: int64Mod, offsetsFor } = modules;
-
-        // Hacerlas disponibles globalmente
-        window.establishPrimitive = establishPrimitive;
-        window.installWindowP = installWindowP;
-        window.int64 = int64Mod;
-        window.offsetsFor = offsetsFor;
-
-        __exploitBridge.mark("MODULES-READY", "All modules loaded and ready");
-
-        // CONTINUAR con el resto del código...
         const params = new URLSearchParams(location.search);
 
         const fwResolved = offsetsFor(navigator.userAgent);
